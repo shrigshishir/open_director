@@ -1,0 +1,401 @@
+name: flutter_video_editor_app
+description: "A new Flutter project."
+# The following line prevents the package from being accidentally published to
+# pub.dev using `flutter pub publish`. This is preferred for private packages.
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.0
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # The following adds the Cupertino Icons font to your application.
+  # Use with the CupertinoIcons class for iOS style icons.
+  cupertino_icons: ^1.0.8
+  sqflite: ^2.4.2
+  path: ^1.9.1
+  rxdart: ^0.28.0
+  get_it: ^8.2.0
+  file_picker: ^10.3.2
+  path_provider: ^2.1.5
+  video_player: ^2.10.0
+  permission_handler: ^12.0.1
+  intl: ^0.20.2
+  open_file: ^3.5.10
+  logger: ^2.6.1
+  flutter_colorpicker: ^1.1.0
+  dotted_border: ^3.1.0
+  # flutter_ffmpeg: ^0.4.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^5.0.0
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  # To add assets to your application, add an assets section, like this:
+  assets:
+    - assets/
+  #   - images/a_dot_ham.jpeg
+
+  # An image asset can refer to one or more resolution-specific "variants", see
+  # https://flutter.dev/to/resolution-aware-images
+
+  # For details regarding adding assets from package dependencies, see
+  # https://flutter.dev/to/asset-from-package
+
+  # To add custom fonts to your application, add a fonts section here,
+  # in this "flutter" section. Each entry in this list should have a
+  # "family" key with the font family name, and a "fonts" key with a
+  # list giving the asset and other descriptors for the font. For
+  # example:
+
+  fonts:
+    - family: Amaranth
+      fonts:
+        - asset: assets/fonts/Amaranth/Amaranth-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Amaranth/Amaranth-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/Amaranth/Amaranth-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Amaranth/Amaranth-Regular.ttf
+          weight: 400
+    - family: Bangers
+      fonts:
+        - asset: assets/fonts/Bangers/Bangers-Regular.ttf
+          weight: 400
+    - family: CarterOne
+      fonts:
+        - asset: assets/fonts/Carter_One/CarterOne-Regular.ttf
+          weight: 400
+    - family: Chilanka
+      fonts:
+        - asset: assets/fonts/Chilanka/Chilanka-Regular.ttf
+          weight: 400
+    - family: Courgette
+      fonts:
+        - asset: assets/fonts/Courgette/Courgette-Regular.ttf
+          weight: 400
+    - family: DancingScript
+      fonts:
+        - asset: assets/fonts/Dancing_Script/DancingScript-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Dancing_Script/DancingScript-Regular.ttf
+          weight: 400
+    - family: GochiHand
+      fonts:
+        - asset: assets/fonts/Gochi_Hand/GochiHand-Regular.ttf
+          weight: 400
+    - family: Grenze
+      fonts:
+        - asset: assets/fonts/Grenze/Grenze-Black.ttf
+          weight: 900
+        - asset: assets/fonts/Grenze/Grenze-BlackItalic.ttf
+          weight: 900
+          style: italic
+        - asset: assets/fonts/Grenze/Grenze-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Grenze/Grenze-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/Grenze/Grenze-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Grenze/Grenze-ExtraBoldItalic.ttf
+          weight: 800
+          style: italic
+        - asset: assets/fonts/Grenze/Grenze-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/Grenze/Grenze-ExtraLightItalic.ttf
+          weight: 200
+          style: italic
+        - asset: assets/fonts/Grenze/Grenze-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Grenze/Grenze-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Grenze/Grenze-LightItalic.ttf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/Grenze/Grenze-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Grenze/Grenze-MediumItalic.ttf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/Grenze/Grenze-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Grenze/Grenze-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Grenze/Grenze-SemiBoldItalic.ttf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/Grenze/Grenze-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/Grenze/Grenze-ThinItalic.ttf
+          weight: 100
+          style: italic
+    - family: Handlee
+      fonts:
+        - asset: assets/fonts/Handlee/Handlee-Regular.ttf
+          weight: 400
+    - family: IndieFlower
+      fonts:
+        - asset: assets/fonts/Indie_Flower/IndieFlower-Regular.ttf
+          weight: 400
+    - family: Lato
+      fonts:
+        - asset: assets/fonts/Lato/Lato-Black.ttf
+          weight: 900
+        - asset: assets/fonts/Lato/Lato-BlackItalic.ttf
+          weight: 900
+          style: italic
+        - asset: assets/fonts/Lato/Lato-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Lato/Lato-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/Lato/Lato-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Lato/Lato-LightItalic.ttf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/Lato/Lato-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Lato/Lato-RegularItalic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Lato/Lato-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/Lato/Lato-ThinItalic.ttf
+          weight: 100
+          style: italic
+    - family: LibreFranklin
+      fonts:
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-Black.ttf
+          weight: 900
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-BlackItalic.ttf
+          weight: 900
+          style: italic
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-ExtraBoldItalic.ttf
+          weight: 800
+          style: italic
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-ExtraLightItalic.ttf
+          weight: 200
+          style: italic
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-LightItalic.ttf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-MediumItalic.ttf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-SemiBoldItalic.ttf
+          weight: 600
+          style: italic
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/Libre_Franklin/LibreFranklin-ThinItalic.ttf
+          weight: 100
+          style: italic
+    - family: Lobster
+      fonts:
+        - asset: assets/fonts/Lobster/Lobster-Regular.ttf
+          weight: 400
+    - family: LuckiestGuy
+      fonts:
+        - asset: assets/fonts/Luckiest_Guy/LuckiestGuy-Regular.ttf
+          weight: 400
+    - family: Mansalva
+      fonts:
+        - asset: assets/fonts/Mansalva/Mansalva-Regular.ttf
+          weight: 400
+    - family: Merriweather
+      fonts:
+        - asset: assets/fonts/Merriweather/Merriweather-Black.ttf
+          weight: 900
+        - asset: assets/fonts/Merriweather/Merriweather-BlackItalic.ttf
+          weight: 900
+          style: italic
+        - asset: assets/fonts/Merriweather/Merriweather-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Merriweather/Merriweather-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/Merriweather/Merriweather-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Merriweather/Merriweather-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Merriweather/Merriweather-LightItalic.ttf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/Merriweather/Merriweather-Regular.ttf
+          weight: 400
+    - family: OpenSans
+      fonts:
+        - asset: assets/fonts/Open_Sans/OpenSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Open_Sans/OpenSans-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/Open_Sans/OpenSans-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Open_Sans/OpenSans-ExtraBoldItalic.ttf
+          weight: 800
+          style: italic
+        - asset: assets/fonts/Open_Sans/OpenSans-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Open_Sans/OpenSans-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Open_Sans/OpenSans-LightItalic.ttf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/Open_Sans/OpenSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Open_Sans/OpenSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Open_Sans/OpenSans-SemiBoldItalic.ttf
+          weight: 600
+          style: italic
+    - family: Pacifico
+      fonts:
+        - asset: assets/fonts/Pacifico/Pacifico-Regular.ttf
+          weight: 400
+    - family: PermanentMarker
+      fonts:
+        - asset: assets/fonts/Permanent_Marker/PermanentMarker-Regular.ttf
+          weight: 400
+    - family: Righteous
+      fonts:
+        - asset: assets/fonts/Righteous/Righteous-Regular.ttf
+          weight: 400
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto/Roboto-Black.ttf
+          weight: 900
+        - asset: assets/fonts/Roboto/Roboto-BlackItalic.ttf
+          weight: 900
+          style: italic
+        - asset: assets/fonts/Roboto/Roboto-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Roboto/Roboto-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/Roboto/Roboto-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Roboto/Roboto-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Roboto/Roboto-LightItalic.ttf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/Roboto/Roboto-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Roboto/Roboto-MediumItalic.ttf
+          weight: 500
+          style: italic
+        - asset: assets/fonts/Roboto/Roboto-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Roboto/Roboto-RegularItalic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Roboto/Roboto-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/Roboto/Roboto-ThinItalic.ttf
+          weight: 100
+          style: italic
+    - family: SourceSansPro
+      fonts:
+        - asset: assets/fonts/Source_Sans_Pro/SourceSansPro-Black.ttf
+          weight: 900
+        - asset: assets/fonts/Source_Sans_Pro/SourceSansPro-BlackItalic.ttf
+          weight: 900
+          style: italic
+        - asset: assets/fonts/Source_Sans_Pro/SourceSansPro-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Source_Sans_Pro/SourceSansPro-BoldItalic.ttf
+          weight: 700
+          style: italic
+        - asset: assets/fonts/Source_Sans_Pro/SourceSansPro-ExtraLight.ttf
+          weight: 200
+        - asset: assets/fonts/Source_Sans_Pro/SourceSansPro-ExtraLightItalic.ttf
+          weight: 200
+          style: italic
+        - asset: assets/fonts/Source_Sans_Pro/SourceSansPro-Italic.ttf
+          weight: 400
+          style: italic
+        - asset: assets/fonts/Source_Sans_Pro/SourceSansPro-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Source_Sans_Pro/SourceSansPro-LightItalic.ttf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/Source_Sans_Pro/SourceSansPro-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Source_Sans_Pro/SourceSansPro-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Source_Sans_Pro/SourceSansPro-SemiBoldItalic.ttf
+          weight: 600
+          style: italic
+
+  #
+  # For details regarding fonts from package dependencies,
+  # see https://flutter.dev/to/font-from-package
