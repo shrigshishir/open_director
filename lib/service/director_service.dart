@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_video_editor_app/model/model.dart';
 import 'package:logger/logger.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:file_picker/file_picker.dart';
@@ -92,18 +93,18 @@ class DirectorService {
   Observable<int> get position$ => _position.stream;
   int get position => _position.value;
 
-  BehaviorSubject<Asset> _editingTextAsset = BehaviorSubject.seeded(null);
-  Observable<Asset> get editingTextAsset$ => _editingTextAsset.stream;
-  Asset get editingTextAsset => _editingTextAsset.value;
-  set editingTextAsset(Asset value) {
+  BehaviorSubject<Asset?> _editingTextAsset = BehaviorSubject.seeded(null);
+  Observable<Asset?> get editingTextAsset$ => _editingTextAsset.stream;
+  Asset? get editingTextAsset => _editingTextAsset.value;
+  set editingTextAsset(Asset? value) {
     _editingTextAsset.add(value);
     _appBar.add(true);
   }
 
-  BehaviorSubject<String> _editingColor = BehaviorSubject.seeded(null);
-  Observable<String> get editingColor$ => _editingColor.stream;
+  BehaviorSubject<String?> _editingColor = BehaviorSubject.seeded(null);
+  Observable<String?> get editingColor$ => _editingColor.stream;
   String? get editingColor => _editingColor.value;
-  set editingColor(String value) {
+  set editingColor(String? value) {
     _editingColor.add(value);
     _appBar.add(true);
   }
