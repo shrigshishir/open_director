@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:open_director/service_locator.dart';
-import 'package:open_director/service/project_service.dart';
-import 'package:open_director/model/project.dart';
-import 'package:open_director/ui/director.dart';
+import 'package:flutter_video_editor_app/model/project.dart';
+import 'package:flutter_video_editor_app/service/project_service.dart';
+import 'package:flutter_video_editor_app/service_locator.dart';
+import 'package:flutter_video_editor_app/ui/director.dart';
 
 class ProjectEdit extends StatelessWidget {
   final projectService = locator.get<ProjectService>();
 
-  ProjectEdit(Project project) {
+  ProjectEdit(Project? project) {
     if (project == null) {
       projectService.project = projectService.createNew();
     } else {
@@ -20,7 +20,8 @@ class ProjectEdit extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-            (projectService.project.id == null) ? 'New video' : 'Edit title'),
+          (projectService.project.id == null) ? 'New video' : 'Edit title',
+        ),
       ),
       body: _ProjectEditForm(),
       resizeToAvoidBottomInset: true,
@@ -62,7 +63,7 @@ class _ProjectEditForm extends StatelessWidget {
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
-                    if (value.isEmpty) {
+                    if (value?.isEmpty ?? true) {
                       return 'Please enter a title';
                     }
                     return null;
@@ -82,42 +83,45 @@ class _ProjectEditForm extends StatelessWidget {
                   ),
                 ),
                 Padding(padding: EdgeInsets.only(top: 10)),
-                Row(mainAxisAlignment: MainAxisAlignment.end, children: <
-                    Widget>[
-                  FlatButton(
-                    child: Text('Cancel'),
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                  Padding(padding: EdgeInsets.symmetric(horizontal: 6)),
-                  RaisedButton(
-                    child: Text('OK'),
-                    onPressed: () async {
-                      // If the form is valid
-                      if (_formKey.currentState.validate()) {
-                        // To call onSave in TextFields
-                        _formKey.currentState.save();
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: <Widget>[
+                    TextButton(
+                      child: Text('Cancel'),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    Padding(padding: EdgeInsets.symmetric(horizontal: 6)),
+                    ElevatedButton(
+                      child: Text('OK'),
+                      onPressed: () async {
+                        // If the form is valid
+                        if (_formKey.currentState?.validate() ?? false) {
+                          // To call onSave in TextFields
+                          _formKey.currentState?.save();
 
-                        // To hide soft keyboard
-                        FocusScope.of(context).requestFocus(new FocusNode());
+                          // To hide soft keyboard
+                          FocusScope.of(context).requestFocus(new FocusNode());
 
-                        if (projectService.project.id == null) {
-                          await projectService.insert(projectService.project);
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
+                          if (projectService.project.id == null) {
+                            await projectService.insert(projectService.project);
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
                                 builder: (context) =>
-                                    DirectorScreen(projectService.project)),
-                          );
-                        } else {
-                          await projectService.update(projectService.project);
-                          Navigator.pop(context);
+                                    DirectorScreen(projectService.project),
+                              ),
+                            );
+                          } else {
+                            await projectService.update(projectService.project);
+                            Navigator.pop(context);
+                          }
                         }
-                      }
-                    },
-                  ),
-                ]),
+                      },
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

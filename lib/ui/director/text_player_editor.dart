@@ -78,7 +78,7 @@ class TextPlayerEditor extends StatelessWidget {
             backgroundColor: Color(_asset.boxcolor),
           ),
           onChanged: (newVal) {
-            directorService.editingTextAsset.title = newVal;
+            directorService.editingTextAsset?.title = newVal;
           },
         ),
       ),

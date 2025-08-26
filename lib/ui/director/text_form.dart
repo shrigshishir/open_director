@@ -91,7 +91,10 @@ class _FontFamily extends StatelessWidget {
           Padding(padding: EdgeInsets.symmetric(horizontal: 4)),
           DropdownButton(
             value: (directorService.editingTextAsset != null)
-                ? Font.getByPath(directorService.editingTextAsset.font)
+                ? Font.getByPath(
+                    directorService.editingTextAsset?.font ??
+                        'assets/fonts/Amaranth-Regular.ttf',
+                  )
                 : Font.allFonts[0],
             items: Font.allFonts
                 .map(

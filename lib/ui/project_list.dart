@@ -1,6 +1,11 @@
 import 'dart:io';
+import 'package:flutter_video_editor_app/model/project.dart';
 import 'package:flutter_video_editor_app/service/project_service.dart';
 import 'package:flutter_video_editor_app/service_locator.dart';
+import 'package:flutter_video_editor_app/ui/common/animated_dialog.dart';
+import 'package:flutter_video_editor_app/ui/director.dart';
+import 'package:flutter_video_editor_app/ui/generated_video_list.dart';
+import 'package:flutter_video_editor_app/ui/project_edit.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,7 +22,7 @@ class ProjectList extends StatelessWidget {
       appBar: AppBar(
         title: Text('Open Director'),
         actions: <Widget>[
-          FlatButton.icon(
+          ElevatedButton.icon(
             label: Text('Exit'),
             icon: Icon(Icons.exit_to_app),
             onPressed: () {
@@ -108,7 +113,7 @@ class _ProjectCard extends StatelessWidget {
                   AspectRatio(
                     aspectRatio: 16.0 / 9.0,
                     child: (project.imagePath != null)
-                        ? Image.file(File(project.imagePath))
+                        ? Image.file(File(project.imagePath!))
                         : Container(color: Colors.grey),
                   ),
                   AspectRatio(
@@ -247,11 +252,6 @@ class _CreateProject extends StatelessWidget {
       elevation: 5,
       child: InkWell(
         child: DottedBorder(
-          borderType: BorderType.RRect,
-          color: Colors.grey.shade500,
-          strokeWidth: 2,
-          radius: Radius.circular(10),
-          dashPattern: [8, 8, 8, 8],
           child: ClipRRect(
             borderRadius: BorderRadius.all(Radius.circular(10)),
             child: Container(
