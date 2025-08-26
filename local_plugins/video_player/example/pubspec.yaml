@@ -1,5 +1,7 @@
 name: video_player_example
 description: Demonstrates how to use the video_player plugin.
+environment:
+  sdk: "^3.9.0"
 
 dependencies:
   flutter:
@@ -15,5 +17,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-   - assets/flutter-mark-square-64.png
-   - assets/Butterfly-209.mp4
+    - assets/flutter-mark-square-64.png
+    - assets/Butterfly-209.mp4
