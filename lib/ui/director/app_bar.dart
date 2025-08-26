@@ -1,12 +1,12 @@
 import 'dart:core';
 import 'package:flutter/material.dart';
-import 'package:open_director/service_locator.dart';
-import 'package:open_director/service/director_service.dart';
-import 'package:open_director/model/model.dart';
-import 'package:open_director/ui/director/params.dart';
-import 'package:open_director/service/director/generator.dart';
-import 'package:open_director/ui/director/progress_dialog.dart';
-import 'package:open_director/ui/generated_video_list.dart';
+import 'package:flutter_video_editor_app/model/model.dart';
+import 'package:flutter_video_editor_app/service/director/generator.dart';
+import 'package:flutter_video_editor_app/service/director_service.dart';
+import 'package:flutter_video_editor_app/service_locator.dart';
+import 'package:flutter_video_editor_app/ui/director/params.dart';
+import 'package:flutter_video_editor_app/ui/director/progress_dialog.dart';
+import 'package:flutter_video_editor_app/ui/generated_video_list.dart';
 
 class AppBar1 extends StatelessWidget {
   final directorService = locator.get<DirectorService>();
@@ -14,30 +14,31 @@ class AppBar1 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-        stream: directorService.appBar$,
-        builder: (BuildContext context, AsyncSnapshot<bool> appBar) {
-          bool isLandscape =
-              (MediaQuery.of(context).orientation == Orientation.landscape);
-          if (directorService.editingTextAsset == null) {
-            if (isLandscape) {
-              return _AppBar1Landscape();
-            } else {
-              return _AppBar1Portrait();
-            }
-          } else if (directorService.editingColor == null) {
-            if (isLandscape) {
-              return Container(width: Params.getSideMenuWidth(context));
-            } else {
-              return _AppBar1Portrait();
-            }
+      stream: directorService.appBar$,
+      builder: (BuildContext context, AsyncSnapshot<bool> appBar) {
+        bool isLandscape =
+            (MediaQuery.of(context).orientation == Orientation.landscape);
+        if (directorService.editingTextAsset == null) {
+          if (isLandscape) {
+            return _AppBar1Landscape();
           } else {
-            if (isLandscape) {
-              return Container(width: Params.getSideMenuWidth(context));
-            } else {
-              return _AppBar1Portrait();
-            }
+            return _AppBar1Portrait();
           }
-        });
+        } else if (directorService.editingColor == null) {
+          if (isLandscape) {
+            return Container(width: Params.getSideMenuWidth(context));
+          } else {
+            return _AppBar1Portrait();
+          }
+        } else {
+          if (isLandscape) {
+            return Container(width: Params.getSideMenuWidth(context));
+          } else {
+            return _AppBar1Portrait();
+          }
+        }
+      },
+    );
   }
 }
 
@@ -47,30 +48,31 @@ class AppBar2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-        stream: directorService.appBar$,
-        builder: (BuildContext context, AsyncSnapshot<bool> appBar) {
-          bool isLandscape =
-              (MediaQuery.of(context).orientation == Orientation.landscape);
-          if (directorService.editingTextAsset == null) {
-            if (isLandscape) {
-              return _AppBar2Landscape();
-            } else {
-              return _AppBar2Portrait();
-            }
-          } else if (directorService.editingColor == null) {
-            if (isLandscape) {
-              return _AppBar2EditingTextLandscape();
-            } else {
-              return _AppBar2EditingTextPortrait();
-            }
+      stream: directorService.appBar$,
+      builder: (BuildContext context, AsyncSnapshot<bool> appBar) {
+        bool isLandscape =
+            (MediaQuery.of(context).orientation == Orientation.landscape);
+        if (directorService.editingTextAsset == null) {
+          if (isLandscape) {
+            return _AppBar2Landscape();
           } else {
-            if (isLandscape) {
-              return Container(width: Params.getSideMenuWidth(context));
-            } else {
-              return Container();
-            }
+            return _AppBar2Portrait();
           }
-        });
+        } else if (directorService.editingColor == null) {
+          if (isLandscape) {
+            return _AppBar2EditingTextLandscape();
+          } else {
+            return _AppBar2EditingTextPortrait();
+          }
+        } else {
+          if (isLandscape) {
+            return Container(width: Params.getSideMenuWidth(context));
+          } else {
+            return Container();
+          }
+        }
+      },
+    );
   }
 }
 
@@ -79,7 +81,7 @@ class _AppBar1Landscape extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = List();
+    List<Widget> children = [];
     children.add(_ButtonBack());
     if (directorService.selected.layerIndex != -1) {
       children.add(_ButtonDelete());
@@ -111,7 +113,7 @@ class _AppBar1Portrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = List();
+    List<Widget> children = [];
     children.add(_ButtonBack());
     return AppBar(
       leading: _ButtonBack(),
@@ -126,7 +128,7 @@ class _AppBar2Landscape extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = List();
+    List<Widget> children = [];
     children.add(_ButtonAdd());
     if (directorService.layers[0].assets.isNotEmpty &&
         !directorService.isPlaying) {
@@ -141,10 +143,11 @@ class _AppBar2Landscape extends StatelessWidget {
     return Container(
       width: Params.getSideMenuWidth(context),
       child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          mainAxisSize: MainAxisSize.max,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: children),
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: children,
+      ),
     );
   }
 }
@@ -154,7 +157,7 @@ class _AppBar2Portrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = List();
+    List<Widget> children = [];
     children.add(_ButtonAdd());
     if (directorService.layers[0].assets.isNotEmpty &&
         !directorService.isPlaying) {
@@ -167,7 +170,7 @@ class _AppBar2Portrait extends StatelessWidget {
       children.add(_ButtonGenerate());
     }
 
-    List<Widget> children2 = List();
+    List<Widget> children2 = [];
     if (directorService.selected.layerIndex != -1) {
       children2.add(_ButtonDelete());
     }
@@ -201,13 +204,13 @@ class _AppBar2EditingTextLandscape extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          RaisedButton(
+          ElevatedButton(
             child: Text('SAVE'),
             onPressed: () {
               directorService.saveTextAsset();
             },
           ),
-          FlatButton(
+          TextButton(
             child: Text('Cancel'),
             onPressed: () {
               directorService.editingTextAsset = null;
@@ -224,7 +227,7 @@ class _AppBar2EditingTextPortrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = List();
+    List<Widget> children = [];
     children.add(_ButtonAdd());
 
     return Container(
@@ -232,13 +235,13 @@ class _AppBar2EditingTextPortrait extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          RaisedButton(
+          ElevatedButton(
             child: Text('SAVE'),
             onPressed: () {
               directorService.saveTextAsset();
             },
           ),
-          FlatButton(
+          TextButton(
             child: Text('Cancel'),
             onPressed: () {
               directorService.editingTextAsset = null;
@@ -256,12 +259,13 @@ class _ButtonBack extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-        icon: Icon(Icons.arrow_back, color: Colors.grey.shade500),
-        tooltip: "Back",
-        onPressed: () async {
-          bool exit = await directorService.exitAndSaveProject();
-          if (exit) Navigator.pop(context);
-        });
+      icon: Icon(Icons.arrow_back, color: Colors.grey.shade500),
+      tooltip: "Back",
+      onPressed: () async {
+        bool exit = await directorService.exitAndSaveProject();
+        if (exit) Navigator.pop(context);
+      },
+    );
   }
 }
 
@@ -414,8 +418,9 @@ class _ButtonGenerate extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) =>
-                      GeneratedVideoList(directorService.project)),
+                builder: (context) =>
+                    GeneratedVideoList(directorService.project),
+              ),
             );
           } else {
             directorService.generateVideo(directorService.layers, val);

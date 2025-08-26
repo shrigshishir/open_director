@@ -39,7 +39,8 @@ class DirectorService {
   bool isAdding = false;
   bool isDeleting = false;
   bool isGenerating = false;
-  bool get isOperating => (isEntering ||
+  bool get isOperating =>
+      (isEntering ||
       isExiting ||
       isPlaying ||
       isPreviewing ||
@@ -67,8 +68,9 @@ class DirectorService {
   Observable<bool> get layersChanged$ => _layersChanged.stream;
   bool get layersChanged => _layersChanged.value;
 
-  BehaviorSubject<Selected> _selected =
-      BehaviorSubject.seeded(Selected(-1, -1));
+  BehaviorSubject<Selected> _selected = BehaviorSubject.seeded(
+    Selected(-1, -1),
+  );
   Observable<Selected> get selected$ => _selected.stream;
   Selected get selected => _selected.value;
   Asset get assetSelected {
@@ -77,8 +79,9 @@ class DirectorService {
   }
 
   static const double DEFAULT_PIXELS_PER_SECONDS = 100.0 / 5.0;
-  BehaviorSubject<double> _pixelsPerSecond =
-      BehaviorSubject.seeded(DEFAULT_PIXELS_PER_SECONDS);
+  BehaviorSubject<double> _pixelsPerSecond = BehaviorSubject.seeded(
+    DEFAULT_PIXELS_PER_SECONDS,
+  );
   Observable<double> get pixelsPerSecond$ => _pixelsPerSecond.stream;
   double get pixelsPerSecond => _pixelsPerSecond.value;
 
@@ -99,7 +102,7 @@ class DirectorService {
 
   BehaviorSubject<String> _editingColor = BehaviorSubject.seeded(null);
   Observable<String> get editingColor$ => _editingColor.stream;
-  String get editingColor => _editingColor.value;
+  String? get editingColor => _editingColor.value;
   set editingColor(String value) {
     _editingColor.add(value);
     _appBar.add(true);
@@ -166,9 +169,11 @@ class DirectorService {
           Layer(type: "audio", volume: 1.0),
         ];
       } else {
-        layers = List<Layer>.from(json
-            .decode(_project.layersJson)
-            .map((layerMap) => Layer.fromJson(layerMap))).toList();
+        layers = List<Layer>.from(
+          json
+              .decode(_project.layersJson)
+              .map((layerMap) => Layer.fromJson(layerMap)),
+        ).toList();
         _filesNotExist.add(checkSomeFileNotExists());
       }
       _layersChanged.add(true);
@@ -224,8 +229,9 @@ class DirectorService {
   _saveProject() {
     if (layers == null) return;
     project.layersJson = json.encode(layers);
-    project.imagePath =
-        layers[0].assets.isNotEmpty ? getFirstThumbnailMedPath() : null;
+    project.imagePath = layers[0].assets.isNotEmpty
+        ? getFirstThumbnailMedPath()
+        : null;
     projectService.update(project);
   }
 
@@ -244,8 +250,9 @@ class DirectorService {
     // When playing position is defined by the video player
     if (isPlaying) return;
     // In other case by the scroll manually
-    _position.sink
-        .add(((scrollController.offset / pixelsPerSecond) * 1000).floor());
+    _position.sink.add(
+      ((scrollController.offset / pixelsPerSecond) * 1000).floor(),
+    );
     // Delayed 10 to get more fuidity in scroll and preview
     Future.delayed(Duration(milliseconds: 10), () {
       _previewOnPosition();
@@ -253,8 +260,9 @@ class DirectorService {
   }
 
   endScroll() async {
-    _position.sink
-        .add(((scrollController.offset / pixelsPerSecond) * 1000).floor());
+    _position.sink.add(
+      ((scrollController.offset / pixelsPerSecond) * 1000).floor(),
+    );
     // Delayed 200 because position may not be updated at this time
     Future.delayed(Duration(milliseconds: 200), () {
       _previewOnPosition();
@@ -298,9 +306,10 @@ class DirectorService {
           onMove: (int newPosition) {
             _position.add(newPosition);
             scrollController.animateTo(
-                (300 + newPosition) / 1000 * pixelsPerSecond,
-                duration: Duration(milliseconds: 300),
-                curve: Curves.linear);
+              (300 + newPosition) / 1000 * pixelsPerSecond,
+              duration: Duration(milliseconds: 300),
+              curve: Curves.linear,
+            );
           },
           onEnd: () {
             isPlaying = false;
@@ -418,7 +427,9 @@ class DirectorService {
   }
 
   _generateVideoThumbnails(
-      List<Asset> assets, VideoResolution videoResolution) async {
+    List<Asset> assets,
+    VideoResolution videoResolution,
+  ) async {
     Directory appDocDir = await getApplicationDocumentsDirectory();
     await Directory(p.join(appDocDir.path, 'thumbnails')).create();
     for (int i = 0; i < assets.length; i++) {
@@ -429,11 +440,18 @@ class DirectorService {
           !asset.deleted) {
         String thumbnailFileName =
             p.setExtension(asset.srcPath, '').split('/').last +
-                '_pos_${asset.cutFrom}.jpg';
-        String thumbnailPath =
-            p.join(appDocDir.path, 'thumbnails', thumbnailFileName);
+            '_pos_${asset.cutFrom}.jpg';
+        String thumbnailPath = p.join(
+          appDocDir.path,
+          'thumbnails',
+          thumbnailFileName,
+        );
         thumbnailPath = await generator.generateVideoThumbnail(
-            asset.srcPath, thumbnailPath, asset.cutFrom, videoResolution);
+          asset.srcPath,
+          thumbnailPath,
+          asset.cutFrom,
+          videoResolution,
+        );
 
         if (videoResolution == VideoResolution.mini) {
           asset.thumbnailPath = thumbnailPath;
@@ -451,7 +469,9 @@ class DirectorService {
   }
 
   _generateImageThumbnails(
-      List<Asset> assets, VideoResolution videoResolution) async {
+    List<Asset> assets,
+    VideoResolution videoResolution,
+  ) async {
     Directory appDocDir = await getApplicationDocumentsDirectory();
     await Directory(p.join(appDocDir.path, 'thumbnails')).create();
     for (int i = 0; i < assets.length; i++) {
@@ -462,10 +482,16 @@ class DirectorService {
           !asset.deleted) {
         String thumbnailFileName =
             p.setExtension(asset.srcPath, '').split('/').last + '_min.jpg';
-        String thumbnailPath =
-            p.join(appDocDir.path, 'thumbnails', thumbnailFileName);
+        String thumbnailPath = p.join(
+          appDocDir.path,
+          'thumbnails',
+          thumbnailFileName,
+        );
         thumbnailPath = await generator.generateImageThumbnail(
-            asset.srcPath, thumbnailPath, videoResolution);
+          asset.srcPath,
+          thumbnailPath,
+          videoResolution,
+        );
         if (videoResolution == VideoResolution.mini) {
           asset.thumbnailPath = thumbnailPath;
         } else {
@@ -480,8 +506,11 @@ class DirectorService {
     if (assetSelected == null) return;
     if (assetSelected.type != AssetType.text) return;
     editingTextAsset = Asset.clone(assetSelected);
-    scrollController.animateTo(assetSelected.begin / 1000 * pixelsPerSecond,
-        duration: Duration(milliseconds: 300), curve: Curves.linear);
+    scrollController.animateTo(
+      assetSelected.begin / 1000 * pixelsPerSecond,
+      duration: Duration(milliseconds: 300),
+      curve: Curves.linear,
+    );
   }
 
   saveTextAsset() {
@@ -584,19 +613,23 @@ class DirectorService {
       assetDuration = 5000;
     }
 
-    layers[layerIndex].assets.add(Asset(
-          type: type,
-          srcPath: srcPath,
-          title: p.basename(srcPath),
-          duration: assetDuration,
-          begin: layers[layerIndex].assets.isEmpty
-              ? 0
-              : layers[layerIndex].assets.last.begin +
+    layers[layerIndex].assets.add(
+      Asset(
+        type: type,
+        srcPath: srcPath,
+        title: p.basename(srcPath),
+        duration: assetDuration,
+        begin: layers[layerIndex].assets.isEmpty
+            ? 0
+            : layers[layerIndex].assets.last.begin +
                   layers[layerIndex].assets.last.duration,
-        ));
+      ),
+    );
 
     layerPlayers[layerIndex]?.addMediaSource(
-        layers[layerIndex].assets.length - 1, layers[layerIndex].assets.last);
+      layers[layerIndex].assets.length - 1,
+      layers[layerIndex].assets.last,
+    );
 
     _layersChanged.add(true);
     _appBar.add(true);
@@ -624,12 +657,17 @@ class DirectorService {
   }
 
   dragSelected(
-      int layerIndex, int assetIndex, double dragX, double scrollWidth) {
+    int layerIndex,
+    int assetIndex,
+    double dragX,
+    double scrollWidth,
+  ) {
     if (layerIndex == 1 && layers[layerIndex].assets[assetIndex].title == '')
       return;
     Asset assetSelected = layers[layerIndex].assets[assetIndex];
     int closest = assetIndex;
-    int pos = assetSelected.begin +
+    int pos =
+        assetSelected.begin +
         ((dragX + scrollController.offset - selected.initScrollOffset) /
                 pixelsPerSecond *
                 1000)
@@ -641,33 +679,40 @@ class DirectorService {
       closest = getClosestAssetIndexRight(layerIndex, assetIndex, pos);
     }
     updateScrollOnDrag(pos, scrollWidth);
-    Selected sel = Selected(layerIndex, assetIndex,
-        dragX: dragX,
-        closestAsset: closest,
-        initScrollOffset: selected.initScrollOffset,
-        incrScrollOffset: scrollController.offset - selected.initScrollOffset);
+    Selected sel = Selected(
+      layerIndex,
+      assetIndex,
+      dragX: dragX,
+      closestAsset: closest,
+      initScrollOffset: selected.initScrollOffset,
+      incrScrollOffset: scrollController.offset - selected.initScrollOffset,
+    );
     _selected.add(sel);
   }
 
   updateScrollOnDrag(int pos, double scrollWidth) {
-    double outOfScrollRight = pos * pixelsPerSecond / 1000 -
+    double outOfScrollRight =
+        pos * pixelsPerSecond / 1000 -
         scrollController.offset -
         scrollWidth / 2;
-    double outOfScrollLeft = scrollController.offset -
+    double outOfScrollLeft =
+        scrollController.offset -
         pos * pixelsPerSecond / 1000 -
         scrollWidth / 2 +
         32; // Layer header width: 32
     if (outOfScrollRight > 0 && outOfScrollLeft < 0) {
       scrollController.animateTo(
-          scrollController.offset + math.min(outOfScrollRight, 50),
-          duration: Duration(milliseconds: 100),
-          curve: Curves.linear);
+        scrollController.offset + math.min(outOfScrollRight, 50),
+        duration: Duration(milliseconds: 100),
+        curve: Curves.linear,
+      );
     }
     if (outOfScrollRight < 0 && outOfScrollLeft > 0) {
       scrollController.animateTo(
-          scrollController.offset - math.min(outOfScrollLeft, 50),
-          duration: Duration(milliseconds: 100),
-          curve: Curves.linear);
+        scrollController.offset - math.min(outOfScrollLeft, 50),
+        duration: Duration(milliseconds: 100),
+        curve: Curves.linear,
+      );
     }
   }
 
@@ -687,12 +732,14 @@ class DirectorService {
 
   int getClosestAssetIndexRight(int layerIndex, int assetIndex, int pos) {
     int closest = assetIndex;
-    int endAsset = layers[layerIndex].assets[assetIndex].begin +
+    int endAsset =
+        layers[layerIndex].assets[assetIndex].begin +
         layers[layerIndex].assets[assetIndex].duration;
     int distance = (pos - endAsset).abs();
     if (assetIndex >= layers[layerIndex].assets.length - 1) return assetIndex;
     for (int i = assetIndex + 1; i < layers[layerIndex].assets.length; i++) {
-      int end = layers[layerIndex].assets[i].begin +
+      int end =
+          layers[layerIndex].assets[i].begin +
           layers[layerIndex].assets[i].duration;
       int d = (pos - end).abs();
       if (d < distance) {
@@ -723,7 +770,8 @@ class DirectorService {
     if (layerIndex == -1 ||
         assetIndex1 == -1 ||
         assetIndex2 == -1 ||
-        assetIndex1 == assetIndex2) return;
+        assetIndex1 == assetIndex2)
+      return;
 
     Asset asset1 = layers[layerIndex].assets[assetIndex1];
 
@@ -747,7 +795,8 @@ class DirectorService {
     int assetIndex = selected.assetIndex;
     if (layerIndex == -1 || assetIndex == -1) return;
 
-    int pos = assetSelected.begin +
+    int pos =
+        assetSelected.begin +
         ((selected.dragX +
                     scrollController.offset -
                     selected.initScrollOffset) /
@@ -783,10 +832,14 @@ class DirectorService {
     assetAfter.duration = assetAfter.duration - diff;
 
     layerPlayers[selected.layerIndex]?.removeMediaSource(selected.assetIndex);
-    await layerPlayers[selected.layerIndex]
-        ?.addMediaSource(selected.assetIndex, assetBefore);
-    await layerPlayers[selected.layerIndex]
-        ?.addMediaSource(selected.assetIndex + 1, assetAfter);
+    await layerPlayers[selected.layerIndex]?.addMediaSource(
+      selected.assetIndex,
+      assetBefore,
+    );
+    await layerPlayers[selected.layerIndex]?.addMediaSource(
+      selected.assetIndex + 1,
+      assetAfter,
+    );
 
     _layersChanged.add(true);
 
@@ -844,7 +897,7 @@ class DirectorService {
       layers[layerIndex].assets[i].begin = (i == 0)
           ? 0
           : layers[layerIndex].assets[i - 1].begin +
-              layers[layerIndex].assets[i - 1].duration;
+                layers[layerIndex].assets[i - 1].duration;
     }
   }
 
@@ -864,7 +917,8 @@ class DirectorService {
     _pixelsPerSecond.add(pixPerSecond);
     _layersChanged.add(true);
     scrollController.jumpTo(
-        _scrollOffsetOnInitScale * pixPerSecond / _pixelsPerSecondOnInitScale);
+      _scrollOffsetOnInitScale * pixPerSecond / _pixelsPerSecondOnInitScale,
+    );
   }
 
   scaleEnd() {
@@ -928,44 +982,63 @@ class DirectorService {
         reorganizeTextAssets(1);
       } else if (asset.type == AssetType.image) {
         refreshCalculatedFieldsInAssets(
-            selected.layerIndex, selected.assetIndex);
-        await layerPlayers[selected.layerIndex]
-            ?.removeMediaSource(selected.assetIndex);
-        await layerPlayers[selected.layerIndex]
-            ?.addMediaSource(selected.assetIndex, asset);
+          selected.layerIndex,
+          selected.assetIndex,
+        );
+        await layerPlayers[selected.layerIndex]?.removeMediaSource(
+          selected.assetIndex,
+        );
+        await layerPlayers[selected.layerIndex]?.addMediaSource(
+          selected.assetIndex,
+          asset,
+        );
       }
       _selected.add(Selected(-1, -1));
     }
     _layersChanged.add(true);
   }
 
-  generateVideo(List<Layer> layers, VideoResolution videoResolution,
-      {int framerate}) async {
+  generateVideo(
+    List<Layer> layers,
+    VideoResolution videoResolution, {
+    int framerate,
+  }) async {
     if (filesNotExist) {
       _filesNotExist.add(true);
       return false;
     }
     isGenerating = true;
     _layersChanged.add(true); // Hide images for memory
-    String outputFile =
-        await generator.generateVideoAll(layers, videoResolution);
+    String outputFile = await generator.generateVideoAll(
+      layers,
+      videoResolution,
+    );
     if (outputFile != null) {
       DateTime date = DateTime.now();
       String dateStr = generator.dateTimeString(date);
       String resolutionStr = generator.videoResolutionString(videoResolution);
       Directory appDocDir = await getApplicationDocumentsDirectory();
-      String thumbnailPath =
-          p.join(appDocDir.path, 'thumbnails', 'generated-$dateStr.jpg');
+      String thumbnailPath = p.join(
+        appDocDir.path,
+        'thumbnails',
+        'generated-$dateStr.jpg',
+      );
       thumbnailPath = await generator.generateVideoThumbnail(
-          outputFile, thumbnailPath, 0, VideoResolution.sd);
+        outputFile,
+        thumbnailPath,
+        0,
+        VideoResolution.sd,
+      );
 
-      projectDao.insertGeneratedVideo(GeneratedVideo(
-        projectId: project.id,
-        path: outputFile,
-        date: date,
-        resolution: resolutionStr,
-        thumbnail: thumbnailPath,
-      ));
+      projectDao.insertGeneratedVideo(
+        GeneratedVideo(
+          projectId: project.id,
+          path: outputFile,
+          date: date,
+          resolution: resolutionStr,
+          thumbnail: thumbnailPath,
+        ),
+      );
     }
     isGenerating = false;
     _layersChanged.add(true); // Show images
@@ -976,8 +1049,10 @@ class DirectorService {
     Directory appDocDir = await getApplicationDocumentsDirectory();
     Directory fontsDir = Directory(p.join(appDocDir.parent.path, 'code_cache'));
 
-    List<FileSystemEntity> entityList =
-        fontsDir.listSync(recursive: true, followLinks: false);
+    List<FileSystemEntity> entityList = fontsDir.listSync(
+      recursive: true,
+      followLinks: false,
+    );
     for (FileSystemEntity entity in entityList) {
       if (!await FileSystemEntity.isFile(entity.path) &&
           entity.path.split('/').last.startsWith('open_director')) {}

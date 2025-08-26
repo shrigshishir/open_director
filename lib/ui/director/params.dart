@@ -48,10 +48,14 @@ class Params {
   static double getLayerHeight(BuildContext context, String type) {
     if (type == "raster") {
       return math.min(
-          100, (getTimelineHeight(context) - RULER_HEIGHT) / 4.5 * 2 - 2);
+        100,
+        (getTimelineHeight(context) - RULER_HEIGHT) / 4.5 * 2 - 2,
+      );
     } else {
       return math.min(
-          50, (getTimelineHeight(context) - RULER_HEIGHT) / 4.5 - 2);
+        50,
+        (getTimelineHeight(context) - RULER_HEIGHT) / 4.5 - 2,
+      );
     }
   }
 

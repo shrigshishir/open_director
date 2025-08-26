@@ -20,8 +20,9 @@ class Generator {
   final FirebaseAnalytics analytics = locator.get<FirebaseAnalytics>();
   final FlutterFFmpeg _flutterFFmpeg = new FlutterFFmpeg();
 
-  BehaviorSubject<FFmpegStat> _ffmepegStat =
-      BehaviorSubject.seeded(FFmpegStat());
+  BehaviorSubject<FFmpegStat> _ffmepegStat = BehaviorSubject.seeded(
+    FFmpegStat(),
+  );
   Observable<FFmpegStat> get ffmepegStat$ => _ffmepegStat.stream;
   FFmpegStat get ffmepegStat => _ffmepegStat.value;
 
@@ -30,25 +31,34 @@ class Generator {
     return info['duration'];
   }
 
-  generateVideoThumbnail(String srcPath, String thumbnailPath, int pos,
-      VideoResolution videoResolution) async {
+  generateVideoThumbnail(
+    String srcPath,
+    String thumbnailPath,
+    int pos,
+    VideoResolution videoResolution,
+  ) async {
     VideoResolutionSize size = _videoResolutionSize(videoResolution);
     List pathList = thumbnailPath.split('.');
     pathList[pathList.length - 2] += '_${size.width}x${size.height}';
     String path = pathList.join('.');
-    String arguments = '-loglevel error -y -i "$srcPath" ' +
+    String arguments =
+        '-loglevel error -y -i "$srcPath" ' +
         '-ss ${pos / 1000} -vframes 1 -vf scale=-2:${size.height} "$path"';
     await _flutterFFmpeg.execute(arguments);
     return path;
   }
 
-  generateImageThumbnail(String srcPath, String thumbnailPath,
-      VideoResolution videoResolution) async {
+  generateImageThumbnail(
+    String srcPath,
+    String thumbnailPath,
+    VideoResolution videoResolution,
+  ) async {
     VideoResolutionSize size = _videoResolutionSize(videoResolution);
     List pathList = thumbnailPath.split('.');
     pathList[pathList.length - 2] += '_${size.width}x${size.height}';
     String path = pathList.join('.');
-    String arguments = '-loglevel error -y -r 1 -i "$srcPath" ' +
+    String arguments =
+        '-loglevel error -y -r 1 -i "$srcPath" ' +
         '-ss 0 -vframes 1 -vf scale=-2:${size.height} "$path"';
     await _flutterFFmpeg.execute(arguments);
     return path;
@@ -69,24 +79,35 @@ class Generator {
     arguments += _commandImageVideoFilters(layers[0], 0, videoResolution);
     arguments += _commandAudioFilters(layers[2], layers[0].assets.length);
     arguments += _commandConcatenateStreams(layers[0], 0, false);
-    arguments +=
-        _commandConcatenateStreams(layers[2], layers[0].assets.length, true);
+    arguments += _commandConcatenateStreams(
+      layers[2],
+      layers[0].assets.length,
+      true,
+    );
     arguments += await _commandTextAssets(layers[1], videoResolution);
     arguments = arguments.substring(0, arguments.length - 1);
     arguments += '"';
     arguments += _commandCodecsAndFormat(CodecsAndFormat.H264AacMp4);
     String dateSuffix = dateTimeString(DateTime.now());
     String outputPath = p.join(galleryDirPath, 'Open_Director_$dateSuffix.mp4');
-    arguments +=
-        _commandOutputFile(outputPath, layers[2].assets.isNotEmpty, true);
+    arguments += _commandOutputFile(
+      outputPath,
+      layers[2].assets.isNotEmpty,
+      true,
+    );
 
-    String out =
-        await executeCommand(arguments, finished: true, outputPath: outputPath);
+    String out = await executeCommand(
+      arguments,
+      finished: true,
+      outputPath: outputPath,
+    );
     return out;
   }
 
   generateVideoBySteps(
-      List<Layer> layers, VideoResolution videoResolution) async {
+    List<Layer> layers,
+    VideoResolution videoResolution,
+  ) async {
     // To release memory
     imageCache.clear();
 
@@ -103,8 +124,11 @@ class Generator {
     String arguments = _commandLogLevel('error');
 
     final Directory extStorDir = await getExternalStorageDirectory();
-    String videoConcatenatedPath =
-        p.join(extStorDir.path, 'temp', 'concanenated.mp4');
+    String videoConcatenatedPath = p.join(
+      extStorDir.path,
+      'temp',
+      'concanenated.mp4',
+    );
     arguments += _commandInput(videoConcatenatedPath);
     arguments += await _commandInputForAudios(layers[2]);
 
@@ -118,8 +142,11 @@ class Generator {
     arguments += _commandCodecsAndFormat(CodecsAndFormat.H264AacMp4);
     String dateSuffix = dateTimeString(DateTime.now());
     String outputPath = p.join(galleryDirPath, 'Open_Director_$dateSuffix.mp4');
-    arguments +=
-        _commandOutputFile(outputPath, layers[2].assets.isNotEmpty, true);
+    arguments += _commandOutputFile(
+      outputPath,
+      layers[2].assets.isNotEmpty,
+      true,
+    );
 
     await executeCommand(arguments, finished: true, outputPath: outputPath);
     await _deleteTempDir();
@@ -131,15 +158,25 @@ class Generator {
     int fileNum = 1;
     for (int i = 0; i < layer.assets.length; i++) {
       int rc = await generateVideoForAsset(
-          i, fileNum, layer.assets.length, layer.assets[i], videoResolution);
+        i,
+        fileNum,
+        layer.assets.length,
+        layer.assets[i],
+        videoResolution,
+      );
       if (rc != 0) return rc;
       fileNum++;
     }
     return 0;
   }
 
-  generateVideoForAsset(int index, int fileNum, int totalFiles, Asset asset,
-      VideoResolution videoResolution) async {
+  generateVideoForAsset(
+    int index,
+    int fileNum,
+    int totalFiles,
+    Asset asset,
+    VideoResolution videoResolution,
+  ) async {
     String arguments = _commandLogLevel('error');
     arguments += _commandInput(asset.srcPath);
     arguments += ' -filter_complex "';
@@ -159,8 +196,11 @@ class Generator {
     String outputPath = p.join(extStorDir.path, 'temp', 'v$index.mp4');
     arguments += _commandOutputFile(outputPath, false, true);
 
-    return await executeCommand(arguments,
-        fileNum: fileNum, totalFiles: totalFiles);
+    return await executeCommand(
+      arguments,
+      fileNum: fileNum,
+      totalFiles: totalFiles,
+    );
   }
 
   concatVideos(List<Layer> layers, VideoResolution videoResolution) async {
@@ -203,25 +243,29 @@ class Generator {
     final completer = new Completer<String>();
     DateTime initTime = DateTime.now();
 
-    _flutterFFmpeg.enableStatisticsCallback((int time,
-        int size,
-        double bitrate,
-        double speed,
-        int videoFrameNumber,
-        double videoQuality,
-        double videoFps) {
-      _ffmepegStat.add(FFmpegStat(
-        time: time,
-        size: size,
-        bitrate: bitrate,
-        speed: speed,
-        videoFrameNumber: videoFrameNumber,
-        videoQuality: videoQuality,
-        videoFps: videoFps,
-        timeElapsed: DateTime.now().difference(initTime).inMilliseconds,
-        fileNum: fileNum,
-        totalFiles: totalFiles,
-      ));
+    _flutterFFmpeg.enableStatisticsCallback((
+      int time,
+      int size,
+      double bitrate,
+      double speed,
+      int videoFrameNumber,
+      double videoQuality,
+      double videoFps,
+    ) {
+      _ffmepegStat.add(
+        FFmpegStat(
+          time: time,
+          size: size,
+          bitrate: bitrate,
+          speed: speed,
+          videoFrameNumber: videoFrameNumber,
+          videoQuality: videoQuality,
+          videoFps: videoFps,
+          timeElapsed: DateTime.now().difference(initTime).inMilliseconds,
+          fileNum: fileNum,
+          totalFiles: totalFiles,
+        ),
+      );
     });
 
     _flutterFFmpeg.enableStatistics();
@@ -240,8 +284,9 @@ class Generator {
         _flutterFFmpeg.getLastCommandOutput().then((output) async {
           logger.e('Generator.executeCommand() $output');
           Crashlytics.instance.recordError(
-              'Last ffmpeg command output: $output - Arguments: $arguments',
-              null);
+            'Last ffmpeg command output: $output - Arguments: $arguments',
+            null,
+          );
         });
         completer.complete(null);
       } else {
@@ -280,14 +325,19 @@ class Generator {
   String _commandInput(path) => ' -i "$path"';
 
   String _commandImageVideoFilters(
-      Layer layer, int startIndex, VideoResolution videoResolution) {
+    Layer layer,
+    int startIndex,
+    VideoResolution videoResolution,
+  ) {
     String arguments = "";
     for (var i = 0; i < layer.assets.length; i++) {
       arguments += '[${startIndex + i}:v]';
       arguments += _commandPadForAspectRatioFilter(videoResolution);
       if (layer.assets[i].type == AssetType.image) {
-        arguments +=
-            _commandKenBurnsEffectFilter(videoResolution, layer.assets[i]);
+        arguments += _commandKenBurnsEffectFilter(
+          videoResolution,
+          layer.assets[i],
+        );
       } else if (layer.assets[i].type == AssetType.video) {
         arguments += _commandTrimFilter(layer.assets[i], false);
       }
@@ -300,7 +350,8 @@ class Generator {
   String _commandAudioFilters(Layer layer, int startIndex) {
     String arguments = "";
     for (var i = 0; i < layer.assets.length; i++) {
-      arguments += '[${startIndex + i}:a]' +
+      arguments +=
+          '[${startIndex + i}:a]' +
           _commandTrimFilter(layer.assets[i], true) +
           'acopy[a${startIndex + i}];';
     }
@@ -351,7 +402,9 @@ class Generator {
   }
 
   String _commandKenBurnsEffectFilter(
-      VideoResolution videoResolution, Asset asset) {
+    VideoResolution videoResolution,
+    Asset asset,
+  ) {
     VideoResolutionSize size = _videoResolutionSize(videoResolution);
     // Default framerate 25 in zoompan
     double d = asset.duration / 1000 * 25;
@@ -360,22 +413,22 @@ class Generator {
     String z = asset.kenBurnZSign == 1
         ? "'zoom+${0.2 / d}'"
         : (asset.kenBurnZSign == -1
-            ? "'if(eq(on,1),1.2,zoom-${0.2 / d})'"
-            : "1.2");
+              ? "'if(eq(on,1),1.2,zoom-${0.2 / d})'"
+              : "1.2");
     String x = asset.kenBurnZSign != 0
         ? "'${asset.kenBurnXTarget}*(iw-iw/zoom)'"
         : (asset.kenBurnXTarget == 1
-            ? "'(${asset.kenBurnXTarget}-on/$d)*(iw-iw/zoom)'"
-            : (asset.kenBurnXTarget == 0
-                ? "'on/$d*(iw-iw/zoom)'"
-                : "'(iw-iw/zoom)/2'"));
+              ? "'(${asset.kenBurnXTarget}-on/$d)*(iw-iw/zoom)'"
+              : (asset.kenBurnXTarget == 0
+                    ? "'on/$d*(iw-iw/zoom)'"
+                    : "'(iw-iw/zoom)/2'"));
     String y = asset.kenBurnZSign != 0
         ? "'${asset.kenBurnYTarget}*(ih-ih/zoom)'"
         : (asset.kenBurnYTarget == 1
-            ? "'(${asset.kenBurnYTarget}-on/$d)*(ih-ih/zoom)'"
-            : (asset.kenBurnYTarget == 0
-                ? "'on/$d*(ih-ih/zoom)'"
-                : "'(ih-ih/zoom)/2'"));
+              ? "'(${asset.kenBurnYTarget}-on/$d)*(ih-ih/zoom)'"
+              : (asset.kenBurnYTarget == 0
+                    ? "'on/$d*(ih-ih/zoom)'"
+                    : "'(ih-ih/zoom)/2'"));
     return "zoompan=d=$d:s=$s:z=$z:x=$x:y=$y,";
   }
 
@@ -389,7 +442,8 @@ class Generator {
       arguments += '[${isAudio ? "a" : "v"}$i]';
     }
     if (layer.assets.length > 0) {
-      arguments += 'concat=n=${layer.assets.length}' +
+      arguments +=
+          'concat=n=${layer.assets.length}' +
           ':v=${isAudio ? 0 : 1}:a=${isAudio ? 1 : 0}' +
           '[${isAudio ? "a" : "vprev"}];';
     }
@@ -468,32 +522,30 @@ class Generator {
 
   _getFontPath(String relativePath) async {
     const String rootFontsPath = 'fonts';
-    final ByteData fontFile =
-        await rootBundle.load(p.join(rootFontsPath, relativePath));
+    final ByteData fontFile = await rootBundle.load(
+      p.join(rootFontsPath, relativePath),
+    );
     final Directory appDocDir = await getApplicationDocumentsDirectory();
-    final String fontPath =
-        p.join(appDocDir.parent.path, rootFontsPath, relativePath);
+    final String fontPath = p.join(
+      appDocDir.parent.path,
+      rootFontsPath,
+      relativePath,
+    );
     File(fontPath)
       ..createSync(recursive: true)
-      ..writeAsBytesSync(fontFile.buffer
-          .asUint8List(fontFile.offsetInBytes, fontFile.lengthInBytes));
+      ..writeAsBytesSync(
+        fontFile.buffer.asUint8List(
+          fontFile.offsetInBytes,
+          fontFile.lengthInBytes,
+        ),
+      );
     return fontPath;
   }
 }
 
-enum VideoResolution {
-  sd,
-  hd,
-  fullHd,
-  mini,
-}
+enum VideoResolution { sd, hd, fullHd, mini }
 
-enum CodecsAndFormat {
-  Mpeg4,
-  Xvid,
-  H264AacMp4,
-  VP9OpusWebm,
-}
+enum CodecsAndFormat { Mpeg4, Xvid, H264AacMp4, VP9OpusWebm }
 
 class VideoResolutionSize {
   int width;
@@ -513,8 +565,8 @@ class FFmpegStat {
   String outputPath;
   bool error = false;
   int timeElapsed;
-  int fileNum;
-  int totalFiles;
+  int? fileNum;
+  int? totalFiles;
 
   FFmpegStat({
     this.time = 0,

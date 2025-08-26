@@ -1,17 +1,17 @@
 import 'dart:ui';
 import 'dart:core';
 import 'package:flutter/material.dart';
-import 'package:open_director/service_locator.dart';
-import 'package:open_director/service/director_service.dart';
-import 'package:open_director/model/model.dart';
-import 'package:open_director/ui/director/params.dart';
-import 'package:open_director/ui/director/text_form.dart';
+import 'package:flutter_video_editor_app/model/model.dart';
+import 'package:flutter_video_editor_app/service/director_service.dart';
+import 'package:flutter_video_editor_app/service_locator.dart';
+import 'package:flutter_video_editor_app/ui/director/params.dart';
+import 'package:flutter_video_editor_app/ui/director/text_form.dart';
 
 class TextPlayerEditor extends StatelessWidget {
   final directorService = locator.get<DirectorService>();
-  final Asset _asset;
+  final Asset? _asset;
 
-  TextPlayerEditor(this._asset);
+  TextPlayerEditor(this._asset, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -43,50 +43,44 @@ class TextPlayerEditor extends StatelessWidget {
       child: Container(
         width: Params.getPlayerWidth(context),
         child: TextField(
-            controller: txtController,
-            minLines: 1,
-            maxLines: 1,
-            autocorrect:
-                false, //Doesn´t work: https://github.com/flutter/flutter/issues/22828
-            decoration: InputDecoration(
-              fillColor: Colors.red,
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
-                borderSide: BorderSide(
-                  color: Colors.grey.shade300,
-                  width: 1.0,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.zero,
-                borderSide: BorderSide(
-                  color: Colors.pinkAccent,
-                  width: 2.0,
-                ),
-              ),
-              contentPadding: const EdgeInsets.fromLTRB(0, 1, 0, 1),
-              hintStyle: TextStyle(
-                color: Colors.grey.shade200,
-              ),
-              hintText: 'Click to edit text',
+          controller: txtController,
+          minLines: 1,
+          maxLines: 1,
+          autocorrect:
+              false, //Doesn´t work: https://github.com/flutter/flutter/issues/22828
+          decoration: InputDecoration(
+            fillColor: Colors.red,
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(color: Colors.grey.shade300, width: 1.0),
             ),
-            /*strutStyle: StrutStyle(
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(color: Colors.pinkAccent, width: 2.0),
+            ),
+            contentPadding: const EdgeInsets.fromLTRB(0, 1, 0, 1),
+            hintStyle: TextStyle(color: Colors.grey.shade200),
+            hintText: 'Click to edit text',
+          ),
+          /*strutStyle: StrutStyle(
               height: 1.0,
             ),*/
-            style: TextStyle(
-              height: 1.0,
-              fontSize: _asset.fontSize *
-                  Params.getPlayerWidth(context) /
-                  MediaQuery.of(context).textScaleFactor,
-              fontStyle: font.style,
-              fontFamily: font.family,
-              fontWeight: font.weight,
-              color: Color(_asset.fontColor),
-              backgroundColor: Color(_asset.boxcolor),
-            ),
-            onChanged: (newVal) {
-              directorService.editingTextAsset.title = newVal;
-            }),
+          style: TextStyle(
+            height: 1.0,
+            fontSize:
+                _asset.fontSize *
+                Params.getPlayerWidth(context) /
+                MediaQuery.of(context).textScaleFactor,
+            fontStyle: font.style,
+            fontFamily: font.family,
+            fontWeight: font.weight,
+            color: Color(_asset.fontColor),
+            backgroundColor: Color(_asset.boxcolor),
+          ),
+          onChanged: (newVal) {
+            directorService.editingTextAsset.title = newVal;
+          },
+        ),
       ),
     );
   }
