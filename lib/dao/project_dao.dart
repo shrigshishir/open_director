@@ -1,7 +1,9 @@
+import 'package:flutter_video_editor_app/model/generated_video.dart';
+import 'package:flutter_video_editor_app/model/project.dart';
 import 'package:sqflite/sqflite.dart';
 
 class ProjectDao {
-  Database db;
+  late Database db;
 
   final migrationScripts = [
     '''
@@ -27,7 +29,7 @@ create table generatedVideo (
   ''',
   ];
 
-  Future open() async {
+  Future<void> open() async {
     db = await openDatabase(
       'project',
       version: migrationScripts.length,
@@ -54,8 +56,8 @@ create table generatedVideo (
     return generatedVideo;
   }
 
-  Future<Project> get(int id) async {
-    List<Map> maps = await db.query(
+  Future<Project?> get(int id) async {
+    List<Map<String, Object?>> maps = await db.query(
       'project',
       columns: [
         '_id',
@@ -69,14 +71,14 @@ create table generatedVideo (
       where: '_id = ?',
       whereArgs: [id],
     );
-    if (maps.length > 0) {
+    if (maps.isNotEmpty) {
       return Project.fromMap(maps.first);
     }
     return null;
   }
 
   Future<List<Project>> findAll() async {
-    List<Map> maps = await db.query(
+    List<Map<String, Object?>> maps = await db.query(
       'project',
       columns: [
         '_id',
@@ -92,7 +94,7 @@ create table generatedVideo (
   }
 
   Future<List<GeneratedVideo>> findAllGeneratedVideo(int projectId) async {
-    List<Map> maps = await db.query(
+    List<Map<String, Object?>> maps = await db.query(
       'generatedVideo',
       columns: ['_id', 'projectId', 'path', 'date', 'resolution', 'thumbnail'],
       where: 'projectId = ?',
@@ -123,5 +125,5 @@ create table generatedVideo (
     );
   }
 
-  Future close() async => db.close();
+  Future<void> close() async => db.close();
 }
