@@ -5,63 +5,68 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'dart:typed_data';
 import 'package:flutter/painting.dart';
 import 'package:flutter_video_editor_app/model/model.dart';
+import 'package:flutter_video_editor_app/service_locator.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:logger/logger.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
-import 'package:open_director/service_locator.dart';
-import 'package:open_director/model/model.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/return_code.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
 
 class Generator {
   final logger = locator.get<Logger>();
-  final FirebaseAnalytics analytics = locator.get<FirebaseAnalytics>();
-  final FlutterFFmpeg _flutterFFmpeg = new FlutterFFmpeg();
 
-  BehaviorSubject<FFmpegStat> _ffmepegStat = BehaviorSubject.seeded(
+  final BehaviorSubject<FFmpegStat> _ffmepegStat = BehaviorSubject.seeded(
     FFmpegStat(),
   );
-  Observable<FFmpegStat> get ffmepegStat$ => _ffmepegStat.stream;
+  Stream<FFmpegStat> get ffmepegStat$ => _ffmepegStat.stream;
   FFmpegStat get ffmepegStat => _ffmepegStat.value;
 
-  getVideoDuration(String path) async {
-    Map<dynamic, dynamic> info = await _flutterFFmpeg.getMediaInformation(path);
-    return info['duration'];
+  Future<int> getVideoDuration(String path) async {
+    final info = await FFprobeKit.getMediaInformation(path);
+    final properties = info.getMediaInformation()?.getAllProperties() ?? {};
+    final duration = properties['duration'];
+    if (duration is String) {
+      return double.tryParse(duration)?.round() ?? 4;
+    } else if (duration is num) {
+      return duration.round();
+    }
+    return 4;
   }
 
-  generateVideoThumbnail(
+  Future<String> generateVideoThumbnail(
     String srcPath,
     String thumbnailPath,
     int pos,
     VideoResolution videoResolution,
   ) async {
     VideoResolutionSize size = _videoResolutionSize(videoResolution);
-    List pathList = thumbnailPath.split('.');
+    List<String> pathList = thumbnailPath.split('.');
     pathList[pathList.length - 2] += '_${size.width}x${size.height}';
     String path = pathList.join('.');
     String arguments =
         '-loglevel error -y -i "$srcPath" ' +
         '-ss ${pos / 1000} -vframes 1 -vf scale=-2:${size.height} "$path"';
-    await _flutterFFmpeg.execute(arguments);
+    await FFmpegKit.execute(arguments);
     return path;
   }
 
-  generateImageThumbnail(
+  Future<String> generateImageThumbnail(
     String srcPath,
     String thumbnailPath,
     VideoResolution videoResolution,
   ) async {
     VideoResolutionSize size = _videoResolutionSize(videoResolution);
-    List pathList = thumbnailPath.split('.');
+    List<String> pathList = thumbnailPath.split('.');
     pathList[pathList.length - 2] += '_${size.width}x${size.height}';
     String path = pathList.join('.');
     String arguments =
         '-loglevel error -y -r 1 -i "$srcPath" ' +
         '-ss 0 -vframes 1 -vf scale=-2:${size.height} "$path"';
-    await _flutterFFmpeg.execute(arguments);
+    await FFmpegKit.execute(arguments);
     return path;
   }
 
@@ -70,8 +75,8 @@ class Generator {
     imageCache.clear();
 
     final String galleryDirPath = '/storage/emulated/0/Movies/OpenDirector';
-    await PermissionHandler().requestPermissions([PermissionGroup.storage]);
-    await new Directory(galleryDirPath).create();
+    await Permission.storage.request();
+    await Directory(galleryDirPath).create();
 
     String arguments = _commandLogLevel('error');
     arguments += _commandInputs(layers[0]);
@@ -97,7 +102,7 @@ class Generator {
       true,
     );
 
-    String out = await executeCommand(
+    final out = await executeCommand(
       arguments,
       finished: true,
       outputPath: outputPath,
@@ -119,12 +124,12 @@ class Generator {
     if (rc != 0) return;
 
     final String galleryDirPath = '/storage/emulated/0/Movies/OpenDirector';
-    await PermissionHandler().requestPermissions([PermissionGroup.storage]);
+    await Permission.storage.request();
     await new Directory(galleryDirPath).create();
 
     String arguments = _commandLogLevel('error');
 
-    final Directory extStorDir = await getExternalStorageDirectory();
+    final Directory extStorDir = (await getExternalStorageDirectory())!;
     String videoConcatenatedPath = p.join(
       extStorDir.path,
       'temp',
@@ -154,7 +159,7 @@ class Generator {
   }
 
   generateVideosForAssets(Layer layer, VideoResolution videoResolution) async {
-    final Directory extStorDir = await getExternalStorageDirectory();
+    final Directory extStorDir = (await getExternalStorageDirectory())!;
     await Directory(p.join(extStorDir.path, 'temp')).create();
     int fileNum = 1;
     for (int i = 0; i < layer.assets.length; i++) {
@@ -193,7 +198,7 @@ class Generator {
     arguments += '[v]"';
     arguments += _commandCodecsAndFormat(CodecsAndFormat.H264AacMp4);
 
-    final Directory extStorDir = await getExternalStorageDirectory();
+    final Directory extStorDir = (await getExternalStorageDirectory())!;
     String outputPath = p.join(extStorDir.path, 'temp', 'v$index.mp4');
     arguments += _commandOutputFile(outputPath, false, true);
 
@@ -209,7 +214,7 @@ class Generator {
     String listPath = await _listForConcat(layers[0]);
     arguments += ' -f concat -safe 0 -i "$listPath" -c copy';
 
-    final Directory extStorDir = await getExternalStorageDirectory();
+    final Directory extStorDir = (await getExternalStorageDirectory())!;
     String outputPath = p.join(extStorDir.path, 'temp', 'concanenated.mp4');
     arguments += ' -y "$outputPath"';
 
@@ -217,7 +222,7 @@ class Generator {
   }
 
   _listForConcat(Layer layer) async {
-    final Directory extStorDir = await getExternalStorageDirectory();
+    final Directory extStorDir = (await getExternalStorageDirectory())!;
     String tempPath = p.join(extStorDir.path, 'temp');
     String list = '';
     for (int i = 0; i < layer.assets.length; i++) {
@@ -229,81 +234,47 @@ class Generator {
 
   _deleteTempDir() async {
     print('_deleteTempDir()');
-    final Directory extStorDir = await getExternalStorageDirectory();
+    final Directory extStorDir = (await getExternalStorageDirectory())!;
     String tempPath = p.join(extStorDir.path, 'temp');
     await Directory(tempPath).delete(recursive: true);
   }
 
-  executeCommand(
+  Future<String?> executeCommand(
     String arguments, {
-    String outputPath,
-    int fileNum,
-    int totalFiles,
+    String? outputPath,
+    int? fileNum,
+    int? totalFiles,
     bool finished = false,
-  }) {
-    final completer = new Completer<String>();
+  }) async {
+    final completer = Completer<String?>();
     DateTime initTime = DateTime.now();
 
-    _flutterFFmpeg.enableStatisticsCallback((
-      int time,
-      int size,
-      double bitrate,
-      double speed,
-      int videoFrameNumber,
-      double videoQuality,
-      double videoFps,
-    ) {
-      _ffmepegStat.add(
-        FFmpegStat(
-          time: time,
-          size: size,
-          bitrate: bitrate,
-          speed: speed,
-          videoFrameNumber: videoFrameNumber,
-          videoQuality: videoQuality,
-          videoFps: videoFps,
-          timeElapsed: DateTime.now().difference(initTime).inMilliseconds,
-          fileNum: fileNum,
-          totalFiles: totalFiles,
-        ),
-      );
-    });
-
-    _flutterFFmpeg.enableStatistics();
-
-    _flutterFFmpeg.execute(arguments).then((int rc) async {
-      if (rc == 0) {
-        ffmepegStat.finished = finished;
-        ffmepegStat.outputPath = outputPath;
-        _ffmepegStat.add(ffmepegStat);
-        Duration diffTime = DateTime.now().difference(initTime);
-        logger.i('Generator.executeCommand() $diffTime)');
-        completer.complete(outputPath);
-      } else if (rc != 255) {
-        ffmepegStat.error = true;
-        _ffmepegStat.add(ffmepegStat);
-        _flutterFFmpeg.getLastCommandOutput().then((output) async {
-          logger.e('Generator.executeCommand() $output');
-          Crashlytics.instance.recordError(
-            'Last ffmpeg command output: $output - Arguments: $arguments',
-            null,
-          );
-        });
-        completer.complete(null);
-      } else {
-        completer.complete(null);
-      }
-      ffmepegStat.time = 0;
-      _flutterFFmpeg.resetStatistics();
-      _flutterFFmpeg.disableStatistics();
-    });
-
+    // ffmpeg_kit_flutter_new does not support direct statistics callback like flutter_ffmpeg
+    // so we only execute and check result
+    final session = await FFmpegKit.execute(arguments);
+    final returnCode = await session.getReturnCode();
+    if (ReturnCode.isSuccess(returnCode)) {
+      ffmepegStat.finished = finished;
+      ffmepegStat.outputPath = outputPath;
+      _ffmepegStat.add(ffmepegStat);
+      Duration diffTime = DateTime.now().difference(initTime);
+      logger.i('Generator.executeCommand() $diffTime)');
+      completer.complete(outputPath);
+    } else {
+      ffmepegStat.error = true;
+      _ffmepegStat.add(ffmepegStat);
+      final output = await session.getAllLogsAsString();
+      logger.e('Generator.executeCommand() $output');
+      // Optionally: Crashlytics.instance.recordError(...)
+      completer.complete(null);
+    }
+    ffmepegStat.time = 0;
     return completer.future;
   }
 
-  finishVideoGeneration() async {
+  Future<void> finishVideoGeneration() async {
     _ffmepegStat.add(FFmpegStat());
-    await _flutterFFmpeg.cancel();
+    // ffmpeg_kit_flutter_new does not support cancel in the same way; you may need to manage this differently
   }
 
   String _commandLogLevel(String level) => '-loglevel $level ';
@@ -549,9 +520,9 @@ enum VideoResolution { sd, hd, fullHd, mini }
 enum CodecsAndFormat { Mpeg4, Xvid, H264AacMp4, VP9OpusWebm }
 
 class VideoResolutionSize {
-  int width;
-  int height;
-  VideoResolutionSize({@required this.width, @required this.height});
+  final int width;
+  final int height;
+  VideoResolutionSize({required this.width, required this.height});
 }
 
 class FFmpegStat {
@@ -562,9 +533,9 @@ class FFmpegStat {
   int videoFrameNumber;
   double videoQuality;
   double videoFps;
-  bool finished = false;
-  String outputPath;
-  bool error = false;
+  bool finished;
+  String? outputPath;
+  bool error;
   int timeElapsed;
   int? fileNum;
   int? totalFiles;
@@ -581,5 +552,7 @@ class FFmpegStat {
     this.timeElapsed = 0,
     this.fileNum,
     this.totalFiles,
+    this.finished = false,
+    this.error = false,
   });
 }

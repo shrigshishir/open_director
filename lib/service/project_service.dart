@@ -1,24 +1,26 @@
 import 'dart:io';
+import 'package:flutter_video_editor_app/model/project.dart';
+import 'package:flutter_video_editor_app/service_locator.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:open_director/service_locator.dart';
-import 'package:open_director/model/project.dart';
-import 'package:open_director/dao/project_dao.dart';
+import 'package:flutter_video_editor_app/dao/project_dao.dart';
 
 class ProjectService {
   final ProjectDao projectDao = locator.get<ProjectDao>();
 
   List<Project> projectList = [];
-  Project project;
+  Project? project;
 
-  BehaviorSubject<bool> _projectListChanged = BehaviorSubject.seeded(false);
-  Observable<bool> get projectListChanged$ => _projectListChanged.stream;
+  final BehaviorSubject<bool> _projectListChanged = BehaviorSubject.seeded(
+    false,
+  );
+  Stream<bool> get projectListChanged$ => _projectListChanged.stream;
   bool get projectListChanged => _projectListChanged.value;
 
   ProjectService() {
     load();
   }
 
-  dispose() {
+  void dispose() {
     _projectListChanged.close();
   }
 
@@ -33,11 +35,11 @@ class ProjectService {
     checkSomeFileNotExists();
   }
 
-  checkSomeFileNotExists() {
+  void checkSomeFileNotExists() {
     for (int i = 0; i < projectList.length; i++) {
       if (projectList[i].imagePath != null &&
-          !File(projectList[i].imagePath).existsSync()) {
-        print('${projectList[i].imagePath} does not exists');
+          !File(projectList[i].imagePath!).existsSync()) {
+        print('${projectList[i].imagePath} does not exist');
         projectList[i].imagePath = null;
       }
     }
@@ -47,19 +49,23 @@ class ProjectService {
     return Project(title: '', duration: 0, date: DateTime.now());
   }
 
-  insert(_project) async {
+  Future<void> insert(Project _project) async {
     _project.date = DateTime.now();
     await projectDao.insert(_project);
     refresh();
   }
 
-  update(_project) async {
+  Future<void> update(Project _project) async {
     await projectDao.update(_project);
     refresh();
   }
 
-  delete(index) async {
-    await projectDao.delete(projectList[index].id);
+  Future<void> delete(int index) async {
+    if (projectList[index].id == null) {
+      print("Project id is null. Cannot delete project.");
+      return;
+    }
+    await projectDao.delete(projectList[index].id!);
     refresh();
   }
 }

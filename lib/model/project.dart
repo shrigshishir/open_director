@@ -2,10 +2,10 @@ class Project {
   int? id;
   final String title;
   final String? description;
-  final DateTime date;
+  DateTime date;
   final int duration;
   final String? layersJson;
-  final String? imagePath;
+  String? imagePath;
 
   Project({
     required this.title,

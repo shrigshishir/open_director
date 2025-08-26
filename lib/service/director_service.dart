@@ -3,20 +3,18 @@ import 'dart:math' as math;
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_video_editor_app/dao/project_dao.dart';
 import 'package:flutter_video_editor_app/model/model.dart';
+import 'package:flutter_video_editor_app/model/project.dart';
+import 'package:flutter_video_editor_app/service/director/layer_player.dart';
+import 'package:flutter_video_editor_app/service/project_service.dart';
 import 'package:logger/logger.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:open_director/service_locator.dart';
-import 'package:open_director/service/director/layer_player.dart';
-import 'package:open_director/service/director/generator.dart';
-import 'package:open_director/service/project_service.dart';
-import 'package:open_director/model/model.dart';
-import 'package:open_director/model/project.dart';
-import 'package:open_director/model/generated_video.dart';
-import 'package:open_director/dao/project_dao.dart';
+import 'package:flutter_video_editor_app/service_locator.dart';
+import 'package:flutter_video_editor_app/service/director/generator.dart';
 
 class DirectorService {
   Project project;
@@ -57,22 +55,22 @@ class DirectorService {
   double dxSizerDrag = 0;
   bool isSizerDraggingEnd = false;
 
-  BehaviorSubject<bool> _filesNotExist = BehaviorSubject.seeded(false);
-  Observable<bool> get filesNotExist$ => _filesNotExist.stream;
+  final BehaviorSubject<bool> _filesNotExist = BehaviorSubject.seeded(false);
+  Stream<bool> get filesNotExist$ => _filesNotExist.stream;
   bool get filesNotExist => _filesNotExist.value;
 
   List<LayerPlayer> layerPlayers;
 
   ScrollController scrollController = ScrollController();
 
-  BehaviorSubject<bool> _layersChanged = BehaviorSubject.seeded(false);
-  Observable<bool> get layersChanged$ => _layersChanged.stream;
+   final BehaviorSubject<bool> _layersChanged = BehaviorSubject.seeded(false);
+  Stream<bool> get layersChanged$ => _layersChanged.stream;
   bool get layersChanged => _layersChanged.value;
 
-  BehaviorSubject<Selected> _selected = BehaviorSubject.seeded(
+ final   BehaviorSubject<Selected> _selected = BehaviorSubject.seeded(
     Selected(-1, -1),
   );
-  Observable<Selected> get selected$ => _selected.stream;
+  Stream<Selected> get selected$ => _selected.stream;
   Selected get selected => _selected.value;
   Asset get assetSelected {
     if (selected.layerIndex == -1 || selected.assetIndex == -1) return null;
@@ -80,29 +78,29 @@ class DirectorService {
   }
 
   static const double DEFAULT_PIXELS_PER_SECONDS = 100.0 / 5.0;
-  BehaviorSubject<double> _pixelsPerSecond = BehaviorSubject.seeded(
+  final BehaviorSubject<double> _pixelsPerSecond = BehaviorSubject.seeded(
     DEFAULT_PIXELS_PER_SECONDS,
   );
-  Observable<double> get pixelsPerSecond$ => _pixelsPerSecond.stream;
+  Stream<double> get pixelsPerSecond$ => _pixelsPerSecond.stream;
   double get pixelsPerSecond => _pixelsPerSecond.value;
 
-  BehaviorSubject<bool> _appBar = BehaviorSubject.seeded(false);
-  Observable<bool> get appBar$ => _appBar.stream;
+ final BehaviorSubject<bool> _appBar = BehaviorSubject.seeded(false);
+  Stream<bool> get appBar$ => _appBar.stream;
 
-  BehaviorSubject<int> _position = BehaviorSubject.seeded(0);
-  Observable<int> get position$ => _position.stream;
+ final BehaviorSubject<int> _position = BehaviorSubject.seeded(0);
+  Stream<int> get position$ => _position.stream;
   int get position => _position.value;
 
-  BehaviorSubject<Asset?> _editingTextAsset = BehaviorSubject.seeded(null);
-  Observable<Asset?> get editingTextAsset$ => _editingTextAsset.stream;
+  final BehaviorSubject<Asset?> _editingTextAsset = BehaviorSubject.seeded(null);
+  Stream<Asset?> get editingTextAsset$ => _editingTextAsset.stream;
   Asset? get editingTextAsset => _editingTextAsset.value;
   set editingTextAsset(Asset? value) {
     _editingTextAsset.add(value);
     _appBar.add(true);
   }
 
-  BehaviorSubject<String?> _editingColor = BehaviorSubject.seeded(null);
-  Observable<String?> get editingColor$ => _editingColor.stream;
+  final BehaviorSubject<String?> _editingColor = BehaviorSubject.seeded(null);
+  Stream<String?> get editingColor$ => _editingColor.stream;
   String? get editingColor => _editingColor.value;
   set editingColor(String? value) {
     _editingColor.add(value);
@@ -245,7 +243,7 @@ class DirectorService {
       }
     }
     return null;
-  }
+  },
 
   _listenerScrollController() async {
     // When playing position is defined by the video player
