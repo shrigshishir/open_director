@@ -20,7 +20,7 @@ class ProjectEdit extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          (projectService.project.id == null) ? 'New video' : 'Edit title',
+          (projectService.project?.id == null) ? 'New video' : 'Edit title',
         ),
       ),
       body: _ProjectEditForm(),
@@ -52,10 +52,11 @@ class _ProjectEditForm extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 TextFormField(
-                  initialValue: projectService.project.title,
+                  initialValue: projectService.project?.title,
                   maxLength: 75,
                   onSaved: (value) {
-                    projectService.project.title = value;
+                    projectService.project?.title =
+                        value ?? "New project title";
                   },
                   decoration: InputDecoration(
                     labelText: 'Title',
@@ -71,11 +72,12 @@ class _ProjectEditForm extends StatelessWidget {
                 ),
                 Padding(padding: EdgeInsets.only(top: 10)),
                 TextFormField(
-                  initialValue: projectService.project.description,
+                  initialValue: projectService.project?.description,
                   maxLines: 3,
                   maxLength: 1000,
                   onSaved: (value) {
-                    projectService.project.description = value;
+                    projectService.project?.description =
+                        value ?? "This is a new project description";
                   },
                   decoration: InputDecoration(
                     labelText: 'Description (optional)',
@@ -104,17 +106,21 @@ class _ProjectEditForm extends StatelessWidget {
                           // To hide soft keyboard
                           FocusScope.of(context).requestFocus(new FocusNode());
 
-                          if (projectService.project.id == null) {
-                            await projectService.insert(projectService.project);
+                          if (projectService.project?.id == null) {
+                            await projectService.insert(
+                              projectService.project!,
+                            );
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
-                                    DirectorScreen(projectService.project),
+                                    DirectorScreen(projectService.project!),
                               ),
                             );
                           } else {
-                            await projectService.update(projectService.project);
+                            await projectService.update(
+                              projectService.project!,
+                            );
                             Navigator.pop(context);
                           }
                         }

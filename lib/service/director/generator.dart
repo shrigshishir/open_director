@@ -14,7 +14,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
 import 'package:ffmpeg_kit_flutter_new/return_code.dart';
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
 
 class Generator {
   final logger = locator.get<Logger>();

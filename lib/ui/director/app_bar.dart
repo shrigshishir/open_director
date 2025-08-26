@@ -117,7 +117,7 @@ class _AppBar1Portrait extends StatelessWidget {
     children.add(_ButtonBack());
     return AppBar(
       leading: _ButtonBack(),
-      title: Text(directorService.project.title),
+      title: Text(directorService.project?.title ?? "Untitled Project"),
       actions: children,
     );
   }
@@ -414,12 +414,18 @@ class _ButtonGenerate extends StatelessWidget {
       child: PopupMenuButton<dynamic>(
         icon: Icon(Icons.theaters, color: Colors.white),
         onSelected: (dynamic val) {
+          if (directorService.project == null) {
+            print(
+              "Project is null. Theathers cannot be navigated to video list",
+            );
+            return;
+          }
           if (val == 99) {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) =>
-                    GeneratedVideoList(directorService.project),
+                    GeneratedVideoList(directorService.project!),
               ),
             );
           } else {

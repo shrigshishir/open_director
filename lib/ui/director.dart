@@ -415,7 +415,7 @@ class _Video extends StatelessWidget {
         if (directorService.layerPlayers.isEmpty) {
           return backgroundContainer;
         }
-        int assetIndex = directorService.layerPlayers[0].currentAssetIndex;
+        int assetIndex = directorService.layerPlayers[0]!.currentAssetIndex;
         if (assetIndex == -1 ||
             assetIndex >= directorService.layers[0].assets.length) {
           return backgroundContainer;
@@ -428,7 +428,9 @@ class _Video extends StatelessWidget {
             children: [
               backgroundContainer,
               (type == AssetType.video)
-                  ? VideoPlayer(directorService.layerPlayers[0].videoController)
+                  ? VideoPlayer(
+                      directorService.layerPlayers[0]!.videoController,
+                    )
                   : _ImagePlayer(directorService.layers[0].assets[assetIndex]),
               const _TextPlayer(),
             ],
@@ -450,7 +452,7 @@ class _ImagePlayer extends StatelessWidget {
       stream: directorService.position$,
       initialData: 0,
       builder: (BuildContext context, AsyncSnapshot<int> position) {
-        int assetIndex = directorService.layerPlayers[0].currentAssetIndex;
+        int assetIndex = directorService.layerPlayers[0]!.currentAssetIndex;
         double ratio =
             (directorService.position -
                 directorService.layers[0].assets[assetIndex].begin) /

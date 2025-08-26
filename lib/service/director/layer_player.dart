@@ -8,7 +8,7 @@ class LayerPlayer {
   int _newPosition = 0;
 
   late final VideoPlayerController _videoController;
-  // VideoPlayerController get videoController => _videoController;
+  VideoPlayerController get videoController => _videoController;
 
   void Function(int)? _onMove;
   void Function()? _onJump;

@@ -1,10 +1,10 @@
 class Project {
   int? id;
-  final String title;
-  final String? description;
+  String title;
+  String? description;
   DateTime date;
-  final int duration;
-  final String? layersJson;
+  int duration;
+  String? layersJson;
   String? imagePath;
 
   Project({
