@@ -1,17 +1,15 @@
-import 'package:flutter/foundation.dart';
-
 class GeneratedVideo {
-  int id;
-  int projectId;
-  String path;
-  DateTime date;
-  String resolution;
-  String thumbnail;
+  int? id;
+  final int projectId;
+  final String path;
+  final DateTime date;
+  final String? resolution;
+  final String? thumbnail;
 
   GeneratedVideo({
-    @required this.projectId,
-    @required this.path,
-    @required this.date,
+    required this.projectId,
+    required this.path,
+    required this.date,
     this.resolution,
     this.thumbnail,
   });
@@ -30,14 +28,13 @@ class GeneratedVideo {
     return map;
   }
 
-  GeneratedVideo.fromMap(Map<String, dynamic> map) {
-    id = map['_id'];
-    projectId = map['projectId'];
-    path = map['path'];
-    date = DateTime.fromMillisecondsSinceEpoch(map['date']);
-    resolution = map['resolution'];
-    thumbnail = map['thumbnail'];
-  }
+  GeneratedVideo.fromMap(Map<String, dynamic> map)
+    : id = map['_id'],
+      projectId = map['projectId'],
+      path = map['path'],
+      date = DateTime.fromMillisecondsSinceEpoch(map['date']),
+      resolution = map['resolution'],
+      thumbnail = map['thumbnail'];
 
   @override
   String toString() {

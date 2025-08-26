@@ -1,19 +1,17 @@
-import 'package:flutter/foundation.dart';
-
 class Project {
-  int id;
-  String title;
-  String description;
-  DateTime date;
-  int duration;
-  String layersJson;
-  String imagePath;
+  int? id;
+  final String title;
+  final String? description;
+  final DateTime date;
+  final int duration;
+  final String? layersJson;
+  final String? imagePath;
 
   Project({
-    @required this.title,
+    required this.title,
     this.description,
-    @required this.date,
-    @required this.duration,
+    required this.date,
+    required this.duration,
     this.layersJson,
     this.imagePath,
   });
@@ -33,15 +31,14 @@ class Project {
     return map;
   }
 
-  Project.fromMap(Map<String, dynamic> map) {
-    id = map['_id'];
-    title = map['title'];
-    description = map['description'];
-    date = DateTime.fromMillisecondsSinceEpoch(map['date']);
-    duration = map['duration'];
-    layersJson = map['layersJson'];
-    imagePath = map['imagePath'];
-  }
+  Project.fromMap(Map<String, dynamic> map)
+    : id = map['_id'],
+      title = map['title'],
+      description = map['description'],
+      date = DateTime.fromMillisecondsSinceEpoch(map['date']),
+      duration = map['duration'],
+      layersJson = map['layersJson'],
+      imagePath = map['imagePath'];
 
   @override
   String toString() {

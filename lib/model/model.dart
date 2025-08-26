@@ -1,44 +1,39 @@
-import 'package:flutter/foundation.dart';
-
 class Layer {
-  String type; // TODO: enums
+  final String type; // TODO: enums
   List<Asset> assets;
-  double volume;
-  Layer({@required this.type, this.assets, this.volume}) {
-    assets = List<Asset>();
-  }
+  double? volume;
 
-  Layer.clone(Layer layer) {
-    this.type = layer.type;
-    this.assets = layer.assets.map((asset) => Asset.clone(asset)).toList();
-    this.volume = layer.volume;
-  }
+  Layer({required this.type, List<Asset>? assets, this.volume})
+    : assets = assets ?? <Asset>[];
+
+  Layer.clone(Layer layer)
+    : type = layer.type,
+      assets = layer.assets.map((asset) => Asset.clone(asset)).toList(),
+      volume = layer.volume;
 
   Layer.fromJson(Map<String, dynamic> map)
-      : type = map['type'],
-        assets = List<Asset>.from(
-            map['assets'].map((json) => Asset.fromJson(json)).toList()),
-        volume = map['volume'];
+    : type = map['type'],
+      assets = map['assets'] != null
+          ? List<Asset>.from(
+              (map['assets'] as List).map((json) => Asset.fromJson(json)),
+            )
+          : <Asset>[],
+      volume = map['volume'];
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'assets': assets.map((asset) => asset.toJson()).toList(),
-        'volume': volume,
-      };
+    'type': type,
+    'assets': assets.map((asset) => asset.toJson()).toList(),
+    'volume': volume,
+  };
 }
 
-enum AssetType {
-  video,
-  image,
-  text,
-  audio,
-}
+enum AssetType { video, image, text, audio }
 
 class Asset {
   AssetType type;
   String srcPath;
-  String thumbnailPath;
-  String thumbnailMedPath;
+  String? thumbnailPath;
+  String? thumbnailMedPath;
   String title;
   int duration;
   int begin;
@@ -64,13 +59,13 @@ class Asset {
   bool deleted;
 
   Asset({
-    @required this.type,
-    @required this.srcPath,
+    required this.type,
+    required this.srcPath,
     this.thumbnailPath,
     this.thumbnailMedPath,
-    @required this.title,
-    @required this.duration,
-    @required this.begin,
+    required this.title,
+    required this.duration,
+    required this.begin,
     this.cutFrom = 0,
     this.kenBurnZSign = 0,
     this.kenBurnXTarget = 0.5,
@@ -92,93 +87,93 @@ class Asset {
     this.deleted = false,
   });
 
-  Asset.clone(Asset asset) {
-    this.type = asset.type;
-    this.srcPath = asset.srcPath;
-    this.thumbnailPath = asset.thumbnailPath;
-    this.thumbnailMedPath = asset.thumbnailMedPath;
-    this.title = asset.title;
-    this.duration = asset.duration;
-    this.begin = asset.begin;
-    this.cutFrom = asset.cutFrom;
-    this.kenBurnZSign = asset.kenBurnZSign;
-    this.kenBurnXTarget = asset.kenBurnXTarget;
-    this.kenBurnYTarget = asset.kenBurnYTarget;
-    this.x = asset.x;
-    this.y = asset.y;
-    this.font = asset.font;
-    this.fontSize = asset.fontSize;
-    this.fontColor = asset.fontColor;
-    this.alpha = asset.alpha;
-    this.borderw = asset.borderw;
-    this.bordercolor = asset.bordercolor;
-    this.shadowcolor = asset.shadowcolor;
-    this.shadowx = asset.shadowx;
-    this.shadowy = asset.shadowy;
-    this.box = asset.box;
-    this.boxborderw = asset.boxborderw;
-    this.boxcolor = asset.boxcolor;
-    this.deleted = asset.deleted;
-  }
+  Asset.clone(Asset asset)
+    : type = asset.type,
+      srcPath = asset.srcPath,
+      thumbnailPath = asset.thumbnailPath,
+      thumbnailMedPath = asset.thumbnailMedPath,
+      title = asset.title,
+      duration = asset.duration,
+      begin = asset.begin,
+      cutFrom = asset.cutFrom,
+      kenBurnZSign = asset.kenBurnZSign,
+      kenBurnXTarget = asset.kenBurnXTarget,
+      kenBurnYTarget = asset.kenBurnYTarget,
+      x = asset.x,
+      y = asset.y,
+      font = asset.font,
+      fontSize = asset.fontSize,
+      fontColor = asset.fontColor,
+      alpha = asset.alpha,
+      borderw = asset.borderw,
+      bordercolor = asset.bordercolor,
+      shadowcolor = asset.shadowcolor,
+      shadowx = asset.shadowx,
+      shadowy = asset.shadowy,
+      box = asset.box,
+      boxborderw = asset.boxborderw,
+      boxcolor = asset.boxcolor,
+      deleted = asset.deleted;
 
   Asset.fromJson(Map<String, dynamic> map)
-      : type = getAssetTypeFromString(map['type']),
-        srcPath = map['srcPath'],
-        thumbnailPath = map['thumbnailPath'],
-        thumbnailMedPath = map['thumbnailMedPath'],
-        title = map['title'],
-        duration = map['duration'],
-        begin = map['begin'],
-        cutFrom = map['cutFrom'],
-        kenBurnZSign = map['kenBurnZSign'],
-        kenBurnXTarget = map['kenBurnXTarget'],
-        kenBurnYTarget = map['kenBurnYTarget'],
-        x = map['x'],
-        y = map['y'],
-        font = map['font'],
-        fontSize = map['fontSize'],
-        fontColor = map['fontColor'],
-        alpha = map['alpha'],
-        borderw = map['borderw'],
-        bordercolor = map['bordercolor'],
-        shadowcolor = map['shadowcolor'],
-        shadowx = map['shadowx'],
-        shadowy = map['shadowy'],
-        box = map['box'],
-        boxborderw = map['boxborderw'],
-        boxcolor = map['boxcolor'],
-        deleted = map['deleted'];
+    : type = getAssetTypeFromString(map['type'])!,
+      srcPath = map['srcPath'],
+      thumbnailPath = map['thumbnailPath'],
+      thumbnailMedPath = map['thumbnailMedPath'],
+      title = map['title'],
+      duration = map['duration'],
+      begin = map['begin'],
+      cutFrom = map['cutFrom'] ?? 0,
+      kenBurnZSign = map['kenBurnZSign'] ?? 0,
+      kenBurnXTarget = (map['kenBurnXTarget'] ?? 0.5).toDouble(),
+      kenBurnYTarget = (map['kenBurnYTarget'] ?? 0.5).toDouble(),
+      x = (map['x'] ?? 0.1).toDouble(),
+      y = (map['y'] ?? 0.1).toDouble(),
+      font = map['font'] ?? 'Lato/Lato-Regular.ttf',
+      fontSize = (map['fontSize'] ?? 0.1).toDouble(),
+      fontColor = map['fontColor'] ?? 0xFFFFFFFF,
+      alpha = (map['alpha'] ?? 1).toDouble(),
+      borderw = (map['borderw'] ?? 0).toDouble(),
+      bordercolor = map['bordercolor'] ?? 0xFFFFFFFF,
+      shadowcolor = map['shadowcolor'] ?? 0xFFFFFFFF,
+      shadowx = (map['shadowx'] ?? 0).toDouble(),
+      shadowy = (map['shadowy'] ?? 0).toDouble(),
+      box = map['box'] ?? false,
+      boxborderw = (map['boxborderw'] ?? 0).toDouble(),
+      boxcolor = map['boxcolor'] ?? 0x88000000,
+      deleted = map['deleted'] ?? false;
 
   Map<String, dynamic> toJson() => {
-        'type': type.toString(),
-        'srcPath': srcPath,
-        'thumbnailPath': thumbnailPath,
-        'thumbnailMedPath': thumbnailMedPath,
-        'title': title,
-        'duration': duration,
-        'begin': begin,
-        'cutFrom': cutFrom,
-        'kenBurnZSign': kenBurnZSign,
-        'kenBurnXTarget': kenBurnXTarget,
-        'kenBurnYTarget': kenBurnYTarget,
-        'x': x,
-        'y': y,
-        'font': font,
-        'fontSize': fontSize,
-        'fontColor': fontColor,
-        'alpha': alpha,
-        'borderw': borderw,
-        'bordercolor': bordercolor,
-        'shadowcolor': shadowcolor,
-        'shadowx': shadowx,
-        'shadowy': shadowy,
-        'box': box,
-        'boxborderw': boxborderw,
-        'boxcolor': boxcolor,
-        'deleted': deleted,
-      };
+    'type': type.toString(),
+    'srcPath': srcPath,
+    'thumbnailPath': thumbnailPath,
+    'thumbnailMedPath': thumbnailMedPath,
+    'title': title,
+    'duration': duration,
+    'begin': begin,
+    'cutFrom': cutFrom,
+    'kenBurnZSign': kenBurnZSign,
+    'kenBurnXTarget': kenBurnXTarget,
+    'kenBurnYTarget': kenBurnYTarget,
+    'x': x,
+    'y': y,
+    'font': font,
+    'fontSize': fontSize,
+    'fontColor': fontColor,
+    'alpha': alpha,
+    'borderw': borderw,
+    'bordercolor': bordercolor,
+    'shadowcolor': shadowcolor,
+    'shadowx': shadowx,
+    'shadowy': shadowy,
+    'box': box,
+    'boxborderw': boxborderw,
+    'boxcolor': boxcolor,
+    'deleted': deleted,
+  };
 
-  static AssetType getAssetTypeFromString(String assetTypeAsString) {
+  static AssetType? getAssetTypeFromString(String? assetTypeAsString) {
+    if (assetTypeAsString == null) return null;
     for (AssetType element in AssetType.values) {
       if (element.toString() == assetTypeAsString) {
         return element;
@@ -189,17 +184,21 @@ class Asset {
 }
 
 class Selected {
-  int layerIndex;
-  int assetIndex;
-  double initScrollOffset;
-  double incrScrollOffset;
+  final int layerIndex;
+  final int assetIndex;
   double dragX;
   int closestAsset;
-  Selected(this.layerIndex, this.assetIndex,
-      {this.dragX = 0,
-      this.closestAsset = -1,
-      this.initScrollOffset = 0,
-      this.incrScrollOffset = 0});
+  double initScrollOffset;
+  double incrScrollOffset;
+
+  Selected(
+    this.layerIndex,
+    this.assetIndex, {
+    this.dragX = 0,
+    this.closestAsset = -1,
+    this.initScrollOffset = 0,
+    this.incrScrollOffset = 0,
+  });
 
   bool isSelected(int layerIndex, int assetIndex) {
     return (layerIndex == this.layerIndex && assetIndex == this.assetIndex);
