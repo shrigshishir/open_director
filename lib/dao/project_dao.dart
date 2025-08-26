@@ -1,17 +1,7 @@
-import 'package:flutter_video_editor_app/model/generated_video.dart';
-import 'package:flutter_video_editor_app/model/project.dart';
 import 'package:sqflite/sqflite.dart';
 
 class ProjectDao {
-  Database? _db;
-
-  Database get db {
-    final dbInstance = _db;
-    if (dbInstance == null) {
-      throw StateError('Database has not been opened. Call open() first.');
-    }
-    return dbInstance;
-  }
+  Database db;
 
   final migrationScripts = [
     '''
@@ -37,9 +27,8 @@ create table generatedVideo (
   ''',
   ];
 
-  Future<void> open() async {
-    if (_db != null) return;
-    _db = await openDatabase(
+  Future open() async {
+    db = await openDatabase(
       'project',
       version: migrationScripts.length,
       onUpgrade: (Database db, int oldVersion, int newVersion) async {
@@ -51,19 +40,22 @@ create table generatedVideo (
   }
 
   Future<Project> insert(Project project) async {
-    final id = await db.insert('project', project.toMap());
-    return project.copyWith(id: id);
+    project.id = await db.insert('project', project.toMap());
+    return project;
   }
 
   Future<GeneratedVideo> insertGeneratedVideo(
     GeneratedVideo generatedVideo,
   ) async {
-    final id = await db.insert('generatedVideo', generatedVideo.toMap());
-    return generatedVideo.copyWith(id: id);
+    generatedVideo.id = await db.insert(
+      'generatedVideo',
+      generatedVideo.toMap(),
+    );
+    return generatedVideo;
   }
 
-  Future<Project?> get(int id) async {
-    final maps = await db.query(
+  Future<Project> get(int id) async {
+    List<Map> maps = await db.query(
       'project',
       columns: [
         '_id',
@@ -77,14 +69,14 @@ create table generatedVideo (
       where: '_id = ?',
       whereArgs: [id],
     );
-    if (maps.isNotEmpty) {
-      return Project.fromMap(Map<String, dynamic>.from(maps.first));
+    if (maps.length > 0) {
+      return Project.fromMap(maps.first);
     }
     return null;
   }
 
   Future<List<Project>> findAll() async {
-    final maps = await db.query(
+    List<Map> maps = await db.query(
       'project',
       columns: [
         '_id',
@@ -96,22 +88,18 @@ create table generatedVideo (
         'imagePath',
       ],
     );
-    return maps
-        .map((m) => Project.fromMap(Map<String, dynamic>.from(m)))
-        .toList();
+    return maps.map((m) => Project.fromMap(m)).toList();
   }
 
   Future<List<GeneratedVideo>> findAllGeneratedVideo(int projectId) async {
-    final maps = await db.query(
+    List<Map> maps = await db.query(
       'generatedVideo',
       columns: ['_id', 'projectId', 'path', 'date', 'resolution', 'thumbnail'],
       where: 'projectId = ?',
       whereArgs: [projectId],
       orderBy: '_id desc',
     );
-    return maps
-        .map((m) => GeneratedVideo.fromMap(Map<String, dynamic>.from(m)))
-        .toList();
+    return maps.map((m) => GeneratedVideo.fromMap(m)).toList();
   }
 
   Future<int> delete(int id) async {
@@ -135,8 +123,5 @@ create table generatedVideo (
     );
   }
 
-  Future<void> close() async {
-    await _db?.close();
-    _db = null;
-  }
+  Future close() async => db.close();
 }

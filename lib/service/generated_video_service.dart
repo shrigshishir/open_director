@@ -1,20 +1,19 @@
 import 'dart:io';
-import 'package:flutter_video_editor_app/dao/project_dao.dart';
-import 'package:flutter_video_editor_app/model/generated_video.dart';
-import 'package:flutter_video_editor_app/service_locator.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:open_director/service_locator.dart';
+import 'package:open_director/model/generated_video.dart';
+import 'package:open_director/dao/project_dao.dart';
 
 class GeneratedVideoService {
   final ProjectDao projectDao = locator.get<ProjectDao>();
 
   List<GeneratedVideo> generatedVideoList = [];
-  int? projectId;
+  int projectId;
 
-  BehaviorSubject<bool> _generatedVideoListChanged = BehaviorSubject.seeded(
-    false,
-  );
-  // Observable<bool> get generatedVideoListChanged$ =>
-  //     _generatedVideoListChanged.stream;
+  BehaviorSubject<bool> _generatedVideoListChanged =
+      BehaviorSubject.seeded(false);
+  Observable<bool> get generatedVideoListChanged$ =>
+      _generatedVideoListChanged.stream;
   bool get generatedVideoListChanged => _generatedVideoListChanged.value;
 
   GeneratedVideoService() {
@@ -29,11 +28,8 @@ class GeneratedVideoService {
     await projectDao.open();
   }
 
-  Stream<bool> get generatedVideoListChanged$ =>
-      _generatedVideoListChanged.stream;
-
-  void refresh(int projectId) async {
-    projectId = projectId;
+  void refresh(int _projectId) async {
+    projectId = _projectId;
     generatedVideoList = [];
     _generatedVideoListChanged.add(true);
     generatedVideoList = await projectDao.findAllGeneratedVideo(projectId);
@@ -46,11 +42,7 @@ class GeneratedVideoService {
 
   delete(index) async {
     if (fileExists(index)) File(generatedVideoList[index].path).deleteSync();
-    if (generatedVideoList[index].id == null) {
-      print("Generated video id is null. Cannot delete generated video.");
-      return;
-    }
-    await projectDao.deleteGeneratedVideo(generatedVideoList[index].id!);
-    refresh(projectId!);
+    await projectDao.deleteGeneratedVideo(generatedVideoList[index].id);
+    refresh(projectId);
   }
 }

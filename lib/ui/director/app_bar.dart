@@ -1,14 +1,12 @@
 import 'dart:core';
 import 'package:flutter/material.dart';
-import 'package:flutter_video_editor_app/model/model.dart';
-import 'package:flutter_video_editor_app/service/director_service.dart';
-import 'package:flutter_video_editor_app/service_locator.dart';
-import 'package:flutter_video_editor_app/ui/director/params.dart';
-import 'package:flutter_video_editor_app/ui/director/progress_dialog.dart';
-import 'package:flutter_video_editor_app/ui/generated_video_list.dart';
-
-// Define the VideoResolution enum if not already defined elsewhere
-enum VideoResolution { fullHd, hd, sd }
+import 'package:open_director/service_locator.dart';
+import 'package:open_director/service/director_service.dart';
+import 'package:open_director/model/model.dart';
+import 'package:open_director/ui/director/params.dart';
+import 'package:open_director/service/director/generator.dart';
+import 'package:open_director/ui/director/progress_dialog.dart';
+import 'package:open_director/ui/generated_video_list.dart';
 
 class AppBar1 extends StatelessWidget {
   final directorService = locator.get<DirectorService>();
@@ -16,31 +14,30 @@ class AppBar1 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: directorService.appBar$,
-      builder: (BuildContext context, AsyncSnapshot<bool> appBar) {
-        bool isLandscape =
-            (MediaQuery.of(context).orientation == Orientation.landscape);
-        if (directorService.editingTextAsset == null) {
-          if (isLandscape) {
-            return _AppBar1Landscape();
+        stream: directorService.appBar$,
+        builder: (BuildContext context, AsyncSnapshot<bool> appBar) {
+          bool isLandscape =
+              (MediaQuery.of(context).orientation == Orientation.landscape);
+          if (directorService.editingTextAsset == null) {
+            if (isLandscape) {
+              return _AppBar1Landscape();
+            } else {
+              return _AppBar1Portrait();
+            }
+          } else if (directorService.editingColor == null) {
+            if (isLandscape) {
+              return Container(width: Params.getSideMenuWidth(context));
+            } else {
+              return _AppBar1Portrait();
+            }
           } else {
-            return _AppBar1Portrait();
+            if (isLandscape) {
+              return Container(width: Params.getSideMenuWidth(context));
+            } else {
+              return _AppBar1Portrait();
+            }
           }
-        } else if (directorService.editingColor == null) {
-          if (isLandscape) {
-            return Container(width: Params.getSideMenuWidth(context));
-          } else {
-            return _AppBar1Portrait();
-          }
-        } else {
-          if (isLandscape) {
-            return Container(width: Params.getSideMenuWidth(context));
-          } else {
-            return _AppBar1Portrait();
-          }
-        }
-      },
-    );
+        });
   }
 }
 
@@ -50,31 +47,30 @@ class AppBar2 extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: directorService.appBar$,
-      builder: (BuildContext context, AsyncSnapshot<bool> appBar) {
-        bool isLandscape =
-            (MediaQuery.of(context).orientation == Orientation.landscape);
-        if (directorService.editingTextAsset == null) {
-          if (isLandscape) {
-            return _AppBar2Landscape();
+        stream: directorService.appBar$,
+        builder: (BuildContext context, AsyncSnapshot<bool> appBar) {
+          bool isLandscape =
+              (MediaQuery.of(context).orientation == Orientation.landscape);
+          if (directorService.editingTextAsset == null) {
+            if (isLandscape) {
+              return _AppBar2Landscape();
+            } else {
+              return _AppBar2Portrait();
+            }
+          } else if (directorService.editingColor == null) {
+            if (isLandscape) {
+              return _AppBar2EditingTextLandscape();
+            } else {
+              return _AppBar2EditingTextPortrait();
+            }
           } else {
-            return _AppBar2Portrait();
+            if (isLandscape) {
+              return Container(width: Params.getSideMenuWidth(context));
+            } else {
+              return Container();
+            }
           }
-        } else if (directorService.editingColor == null) {
-          if (isLandscape) {
-            return _AppBar2EditingTextLandscape();
-          } else {
-            return _AppBar2EditingTextPortrait();
-          }
-        } else {
-          if (isLandscape) {
-            return Container(width: Params.getSideMenuWidth(context));
-          } else {
-            return Container();
-          }
-        }
-      },
-    );
+        });
   }
 }
 
@@ -83,7 +79,7 @@ class _AppBar1Landscape extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = <Widget>[];
+    List<Widget> children = List();
     children.add(_ButtonBack());
     if (directorService.selected.layerIndex != -1) {
       children.add(_ButtonDelete());
@@ -115,11 +111,11 @@ class _AppBar1Portrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = <Widget>[];
+    List<Widget> children = List();
     children.add(_ButtonBack());
     return AppBar(
       leading: _ButtonBack(),
-      title: Text(directorService.project?.title ?? ""),
+      title: Text(directorService.project.title),
       actions: children,
     );
   }
@@ -130,7 +126,7 @@ class _AppBar2Landscape extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = <Widget>[];
+    List<Widget> children = List();
     children.add(_ButtonAdd());
     if (directorService.layers[0].assets.isNotEmpty &&
         !directorService.isPlaying) {
@@ -145,11 +141,10 @@ class _AppBar2Landscape extends StatelessWidget {
     return Container(
       width: Params.getSideMenuWidth(context),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        mainAxisSize: MainAxisSize.max,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: children,
-      ),
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisSize: MainAxisSize.max,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: children),
     );
   }
 }
@@ -159,22 +154,20 @@ class _AppBar2Portrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = [];
+    List<Widget> children = List();
     children.add(_ButtonAdd());
-    if (directorService.layers.isNotEmpty &&
-        directorService.layers[0].assets.isNotEmpty &&
+    if (directorService.layers[0].assets.isNotEmpty &&
         !directorService.isPlaying) {
       children.add(_ButtonPlay());
     }
     if (directorService.isPlaying) {
       children.add(_ButtonPause());
     }
-    if (directorService.layers.isNotEmpty &&
-        directorService.layers[0].assets.isNotEmpty) {
+    if (directorService.layers[0].assets.isNotEmpty) {
       children.add(_ButtonGenerate());
     }
 
-    List<Widget> children2 = [];
+    List<Widget> children2 = List();
     if (directorService.selected.layerIndex != -1) {
       children2.add(_ButtonDelete());
     }
@@ -208,13 +201,13 @@ class _AppBar2EditingTextLandscape extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          ElevatedButton(
+          RaisedButton(
             child: Text('SAVE'),
             onPressed: () {
               directorService.saveTextAsset();
             },
           ),
-          ElevatedButton(
+          FlatButton(
             child: Text('Cancel'),
             onPressed: () {
               directorService.editingTextAsset = null;
@@ -231,7 +224,7 @@ class _AppBar2EditingTextPortrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = <Widget>[];
+    List<Widget> children = List();
     children.add(_ButtonAdd());
 
     return Container(
@@ -239,13 +232,13 @@ class _AppBar2EditingTextPortrait extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          ElevatedButton(
+          RaisedButton(
             child: Text('SAVE'),
             onPressed: () {
               directorService.saveTextAsset();
             },
           ),
-          TextButton(
+          FlatButton(
             child: Text('Cancel'),
             onPressed: () {
               directorService.editingTextAsset = null;
@@ -263,13 +256,12 @@ class _ButtonBack extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: Icon(Icons.arrow_back, color: Colors.grey.shade500),
-      tooltip: "Back",
-      onPressed: () async {
-        bool exit = await directorService.exitAndSaveProject();
-        if (exit) Navigator.pop(context);
-      },
-    );
+        icon: Icon(Icons.arrow_back, color: Colors.grey.shade500),
+        tooltip: "Back",
+        onPressed: () async {
+          bool exit = await directorService.exitAndSaveProject();
+          if (exit) Navigator.pop(context);
+        });
   }
 }
 
@@ -340,19 +332,19 @@ class _ButtonAdd extends StatelessWidget {
           directorService.add(result);
         },
         itemBuilder: (BuildContext context) => <PopupMenuEntry<AssetType>>[
-          PopupMenuItem<AssetType>(
+          const PopupMenuItem<AssetType>(
             value: AssetType.video,
             child: Text('Add video'),
           ),
-          PopupMenuItem<AssetType>(
+          const PopupMenuItem<AssetType>(
             value: AssetType.image,
             child: Text('Add image'),
           ),
-          PopupMenuItem<AssetType>(
+          const PopupMenuItem<AssetType>(
             value: AssetType.audio,
             child: Text('Add audio'),
           ),
-          PopupMenuItem<AssetType>(
+          const PopupMenuItem<AssetType>(
             value: AssetType.text,
             child: Text('Add title'),
           ),
@@ -402,8 +394,7 @@ class _ButtonGenerate extends StatelessWidget {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return CircularProgressIndicator();
-        // return ProgressDialog();
+        return ProgressDialog();
       },
     );
   }
@@ -419,20 +410,15 @@ class _ButtonGenerate extends StatelessWidget {
       child: PopupMenuButton<dynamic>(
         icon: Icon(Icons.theaters, color: Colors.white),
         onSelected: (dynamic val) {
-          if (directorService.project == null) {
-            // Show an error message or handle the case when the project is not available
-            return;
-          }
           if (val == 99) {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    GeneratedVideoList(directorService.project!),
-              ),
+                  builder: (context) =>
+                      GeneratedVideoList(directorService.project)),
             );
           } else {
-            // directorService.generateVideo(directorService.layers, val); // TODO:
+            directorService.generateVideo(directorService.layers, val);
             showProgressDialog(context);
           }
         },

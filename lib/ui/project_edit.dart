@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_video_editor_app/model/project.dart';
-import 'package:flutter_video_editor_app/service/project_service.dart';
-import 'package:flutter_video_editor_app/service_locator.dart';
-import 'package:flutter_video_editor_app/ui/director.dart';
+import 'package:open_director/service_locator.dart';
+import 'package:open_director/service/project_service.dart';
+import 'package:open_director/model/project.dart';
+import 'package:open_director/ui/director.dart';
 
 class ProjectEdit extends StatelessWidget {
   final projectService = locator.get<ProjectService>();
 
-  ProjectEdit(Project? project) {
+  ProjectEdit(Project project) {
     if (project == null) {
       projectService.project = projectService.createNew();
     } else {
@@ -20,8 +20,7 @@ class ProjectEdit extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          (projectService.project?.id == null) ? 'New video' : 'Edit title',
-        ),
+            (projectService.project.id == null) ? 'New video' : 'Edit title'),
       ),
       body: _ProjectEditForm(),
       resizeToAvoidBottomInset: true,
@@ -52,10 +51,10 @@ class _ProjectEditForm extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 TextFormField(
-                  initialValue: projectService.project?.title,
+                  initialValue: projectService.project.title,
                   maxLength: 75,
                   onSaved: (value) {
-                    projectService.project?.title = value ?? "New Video";
+                    projectService.project.title = value;
                   },
                   decoration: InputDecoration(
                     labelText: 'Title',
@@ -63,7 +62,7 @@ class _ProjectEditForm extends StatelessWidget {
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
-                    if (value?.isEmpty ?? true) {
+                    if (value.isEmpty) {
                       return 'Please enter a title';
                     }
                     return null;
@@ -71,11 +70,11 @@ class _ProjectEditForm extends StatelessWidget {
                 ),
                 Padding(padding: EdgeInsets.only(top: 10)),
                 TextFormField(
-                  initialValue: projectService.project?.description,
+                  initialValue: projectService.project.description,
                   maxLines: 3,
                   maxLength: 1000,
                   onSaved: (value) {
-                    projectService.project?.description = value;
+                    projectService.project.description = value;
                   },
                   decoration: InputDecoration(
                     labelText: 'Description (optional)',
@@ -83,45 +82,42 @@ class _ProjectEditForm extends StatelessWidget {
                   ),
                 ),
                 Padding(padding: EdgeInsets.only(top: 10)),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: <Widget>[
-                    ElevatedButton(
-                      child: Text('Cancel'),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    Padding(padding: EdgeInsets.symmetric(horizontal: 6)),
-                    ElevatedButton(
-                      child: Text('OK'),
-                      onPressed: () async {
-                        // If the form is valid
-                        if (_formKey.currentState?.validate() ?? false) {
-                          // To call onSave in TextFields
-                          _formKey.currentState?.save();
+                Row(mainAxisAlignment: MainAxisAlignment.end, children: <
+                    Widget>[
+                  FlatButton(
+                    child: Text('Cancel'),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  Padding(padding: EdgeInsets.symmetric(horizontal: 6)),
+                  RaisedButton(
+                    child: Text('OK'),
+                    onPressed: () async {
+                      // If the form is valid
+                      if (_formKey.currentState.validate()) {
+                        // To call onSave in TextFields
+                        _formKey.currentState.save();
 
-                          // To hide soft keyboard
-                          FocusScope.of(context).requestFocus(FocusNode());
+                        // To hide soft keyboard
+                        FocusScope.of(context).requestFocus(new FocusNode());
 
-                          if (projectService.project?.id == null) {
-                            await projectService.insert(projectService.project);
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
+                        if (projectService.project.id == null) {
+                          await projectService.insert(projectService.project);
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
                                 builder: (context) =>
-                                    DirectorScreen(projectService.project!),
-                              ),
-                            );
-                          } else {
-                            await projectService.update(projectService.project);
-                            Navigator.pop(context);
-                          }
+                                    DirectorScreen(projectService.project)),
+                          );
+                        } else {
+                          await projectService.update(projectService.project);
+                          Navigator.pop(context);
                         }
-                      },
-                    ),
-                  ],
-                ),
+                      }
+                    },
+                  ),
+                ]),
               ],
             ),
           ),
@@ -129,7 +125,7 @@ class _ProjectEditForm extends StatelessWidget {
       ),
       onTap: () {
         // To hide soft keyboard
-        FocusScope.of(context).requestFocus(FocusNode());
+        FocusScope.of(context).requestFocus(new FocusNode());
       },
     );
   }
