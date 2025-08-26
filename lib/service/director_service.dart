@@ -7,7 +7,7 @@ import 'package:flutter_video_editor_app/dao/project_dao.dart';
 // import 'package:flutter_video_editor_app/model/generated_video.dart';
 import 'package:flutter_video_editor_app/model/model.dart';
 import 'package:flutter_video_editor_app/model/project.dart';
-// import 'package:flutter_video_editor_app/service/director/generator.dart';
+import 'package:flutter_video_editor_app/service/director/generator.dart';
 import 'package:flutter_video_editor_app/service/director/layer_player.dart';
 import 'package:flutter_video_editor_app/service/project_service.dart';
 import 'package:flutter_video_editor_app/service_locator.dart';
@@ -21,7 +21,7 @@ class DirectorService {
   Project? project;
   final logger = locator.get<Logger>();
   final projectService = locator.get<ProjectService>();
-  // final generator = locator.get<Generator>();
+  final generator = locator.get<Generator>();
   final projectDao = locator.get<ProjectDao>();
 
   List<Layer> layers = [];
@@ -154,7 +154,7 @@ class DirectorService {
     _layersChanged.listen((bool onData) => _saveProject());
   }
 
-  get generator => null;
+  // get generator => generator;
 
   dispose() {
     _layersChanged.close();
@@ -425,13 +425,13 @@ class DirectorService {
     isAdding = false;
   }
 
-  // _sortFilesByDate(Map<String, String> filePaths) {
-  //   var fileList = filePaths.entries.map((entry) => File(entry.value)).toList();
-  //   fileList.sort((file1, file2) {
-  //     return file1.lastModifiedSync().compareTo(file2.lastModifiedSync());
-  //   });
-  //   return fileList;
-  // }
+  _sortFilesByDate(Map<String, String> filePaths) {
+    var fileList = filePaths.entries.map((entry) => File(entry.value)).toList();
+    fileList.sort((file1, file2) {
+      return file1.lastModifiedSync().compareTo(file2.lastModifiedSync());
+    });
+    return fileList;
+  }
 
   _generateKenBurnEffects(Asset asset) {
     asset.kenBurnZSign = math.Random().nextInt(2) - 1;
