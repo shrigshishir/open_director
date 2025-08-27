@@ -8,7 +8,6 @@ import 'package:flutter_video_editor_app/service_locator.dart';
 import 'package:flutter_video_editor_app/ui/common/animated_dialog.dart';
 import 'package:flutter_video_editor_app/ui/director/app_bar.dart';
 import 'package:flutter_video_editor_app/ui/director/asset_selection.dart';
-import 'package:flutter_video_editor_app/ui/director/asset_sizer.dart';
 import 'package:flutter_video_editor_app/ui/director/color_editor.dart';
 import 'package:flutter_video_editor_app/ui/director/drag_closest.dart';
 import 'package:flutter_video_editor_app/ui/director/params.dart';

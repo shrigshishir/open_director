@@ -113,12 +113,9 @@ class _AppBar1Portrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = [];
-    children.add(_ButtonBack());
     return AppBar(
       leading: _ButtonBack(),
       title: Text(directorService.project?.title ?? "Untitled Project"),
-      actions: children,
     );
   }
 }
@@ -259,7 +256,7 @@ class _ButtonBack extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: Icon(Icons.arrow_back, color: Colors.grey.shade500),
+      icon: Icon(Icons.arrow_back_ios, color: Colors.white),
       tooltip: "Back",
       onPressed: () async {
         bool exit = await directorService.exitAndSaveProject();
