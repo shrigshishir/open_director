@@ -9,6 +9,7 @@ import 'package:flutter_video_editor_app/model/model.dart';
 import 'package:flutter_video_editor_app/model/project.dart';
 import 'package:flutter_video_editor_app/repository/project_repository.dart';
 import 'package:flutter_video_editor_app/ui/common/animated_dialog.dart';
+import 'package:flutter_video_editor_app/ui/director/app_bar.dart';
 import 'package:flutter_video_editor_app/ui/director/asset_selection.dart';
 import 'package:flutter_video_editor_app/ui/director/color_editor.dart';
 import 'package:flutter_video_editor_app/ui/director/drag_closest.dart';
@@ -152,20 +153,12 @@ class _Director extends StatelessWidget {
               ? Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    const AppBar1(),
-                    const _Video(),
-                    const AppBar2(),
-                  ],
+                  children: <Widget>[AppBar1(), const _Video(), AppBar2()],
                 )
               : Column(
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    const AppBar1(),
-                    const _Video(),
-                    const AppBar2(),
-                  ],
+                  children: <Widget>[AppBar1(), const _Video(), AppBar2()],
                 ),
         ),
         Expanded(
@@ -719,43 +712,6 @@ class _Asset extends StatelessWidget {
           },
         );
       },
-    );
-  }
-}
-
-// Temporary placeholder widgets until app_bar.dart is fixed
-class AppBar1 extends StatelessWidget {
-  const AppBar1({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    bool isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-    return Container(
-      height: isLandscape ? double.infinity : 60,
-      width: isLandscape ? 100 : double.infinity,
-      color: Colors.grey[300],
-      child: const Center(
-        child: Text('AppBar1', style: TextStyle(fontSize: 12)),
-      ),
-    );
-  }
-}
-
-class AppBar2 extends StatelessWidget {
-  const AppBar2({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    bool isLandscape =
-        MediaQuery.of(context).orientation == Orientation.landscape;
-    return Container(
-      height: isLandscape ? double.infinity : 60,
-      width: isLandscape ? 100 : double.infinity,
-      color: Colors.grey[400],
-      child: const Center(
-        child: Text('AppBar2', style: TextStyle(fontSize: 12)),
-      ),
     );
   }
 }
