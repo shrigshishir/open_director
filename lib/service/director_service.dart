@@ -236,7 +236,7 @@ class DirectorService {
       isExiting = false;
     });
 
-    _deleteThumbnailsNotUsed();
+    // _deleteThumbnailsNotUsed();
     return true;
   }
 
@@ -401,7 +401,7 @@ class DirectorService {
           .toList();
       for (int i = 0; i < fileList.length; i++) {
         await _addAssetToLayer(0, AssetType.image, fileList[i].path);
-        _generateKenBurnEffects(layers[0].assets.last);
+        // _generateKenBurnEffects(layers[0].assets.last);
         await _generateAllImageThumbnails(layers[0].assets);
       }
     } else if (assetType == AssetType.text) {
@@ -1030,19 +1030,19 @@ class DirectorService {
     }
   }
 
-  _deleteThumbnailsNotUsed() async {
-    // TODO: pending to implement
-    Directory appDocDir = await getApplicationDocumentsDirectory();
-    Directory fontsDir = Directory(p.join(appDocDir.parent.path, 'code_cache'));
+  // _deleteThumbnailsNotUsed() async {
+  //   // TODO: pending to implement
+  //   Directory appDocDir = await getApplicationDocumentsDirectory();
+  //   Directory fontsDir = Directory(p.join(appDocDir.parent.path, 'code_cache'));
 
-    List<FileSystemEntity> entityList = fontsDir.listSync(
-      recursive: true,
-      followLinks: false,
-    );
-    for (FileSystemEntity entity in entityList) {
-      if (!await FileSystemEntity.isFile(entity.path) &&
-          entity.path.split('/').last.startsWith('open_director')) {}
-      //print(entity.path);
-    }
-  }
+  //   List<FileSystemEntity> entityList = fontsDir.listSync(
+  //     recursive: true,
+  //     followLinks: false,
+  //   );
+  //   for (FileSystemEntity entity in entityList) {
+  //     if (!await FileSystemEntity.isFile(entity.path) &&
+  //         entity.path.split('/').last.startsWith('open_director')) {}
+  //     //print(entity.path);
+  //   }
+  // }
 }

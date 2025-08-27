@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:async';
@@ -27,13 +29,19 @@ class Generator {
   Future<int> getVideoDuration(String path) async {
     final info = await FFprobeKit.getMediaInformation(path);
     final properties = info.getMediaInformation()?.getAllProperties() ?? {};
-    final duration = properties['duration'];
-    if (duration is String) {
-      return double.tryParse(duration)?.round() ?? 4;
-    } else if (duration is num) {
-      return duration.round();
+
+    final duration = properties['format']['duration'];
+    if (duration != null) {
+      return (double.parse(duration) * 1000).round();
     }
-    return 4;
+    return 5000;
+
+    // if (duration is String) {
+    //   return double.tryParse(duration)?.round() ?? 4;
+    // } else if (duration is num) {
+    //   return duration.round();
+    // }
+    // return 4;
   }
 
   Future<String> generateVideoThumbnail(
