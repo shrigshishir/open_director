@@ -1,14 +1,15 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_video_editor_app/bloc/director/director_bloc.dart';
+import 'package:flutter_video_editor_app/bloc/director/director_state.dart';
+import 'package:flutter_video_editor_app/bloc/director/director_event.dart';
 import 'package:flutter_video_editor_app/model/model.dart';
-import 'package:flutter_video_editor_app/service/director_service.dart';
-import 'package:flutter_video_editor_app/service_locator.dart';
 
 class TextForm extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
   final Asset _asset;
 
-  TextForm(this._asset, {super.key});
+  const TextForm(this._asset, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -45,8 +46,6 @@ class TextForm extends StatelessWidget {
 }
 
 class _SubMenu extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -73,62 +72,68 @@ class _SubMenu extends StatelessWidget {
 }
 
 class _FontFamily extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
   final Asset _asset;
 
-  _FontFamily(this._asset);
+  const _FontFamily(this._asset);
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 290,
-      child: Row(
-        children: [
-          Text(
-            'Font:',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w100),
-          ),
-          Padding(padding: EdgeInsets.symmetric(horizontal: 4)),
-          DropdownButton(
-            value: (directorService.editingTextAsset != null)
-                ? Font.getByPath(
-                    directorService.editingTextAsset?.font ??
-                        'assets/fonts/Amaranth-Regular.ttf',
-                  )
-                : Font.allFonts[0],
-            items: Font.allFonts
-                .map(
-                  (Font font) => DropdownMenuItem(
-                    value: font,
-                    child: Text(
-                      font.title,
-                      style: TextStyle(
-                        fontFamily: font.family,
-                        fontSize: 14 / MediaQuery.of(context).textScaleFactor,
-                        fontStyle: font.style,
-                        fontWeight: font.weight,
+    return BlocBuilder<DirectorBloc, DirectorState>(
+      builder: (context, state) {
+        if (state is! DirectorLoaded) return Container();
+
+        return SizedBox(
+          width: 290,
+          child: Row(
+            children: [
+              Text(
+                'Font:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w100),
+              ),
+              Padding(padding: EdgeInsets.symmetric(horizontal: 4)),
+              DropdownButton(
+                value: (state.editingTextAsset != null)
+                    ? Font.getByPath(
+                        state.editingTextAsset?.font ??
+                            'assets/fonts/Amaranth-Regular.ttf',
+                      )
+                    : Font.allFonts[0],
+                items: Font.allFonts
+                    .map(
+                      (Font font) => DropdownMenuItem(
+                        value: font,
+                        child: Text(
+                          font.title,
+                          style: TextStyle(
+                            fontFamily: font.family,
+                            fontSize:
+                                14 / MediaQuery.of(context).textScaleFactor,
+                            fontStyle: font.style,
+                            fontWeight: font.weight,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                )
-                .toList(),
-            onChanged: (font) {
-              Asset newAsset = Asset.clone(_asset);
-              newAsset.font = font?.path ?? 'assets/fonts/Amaranth-Regular.ttf';
-              directorService.editingTextAsset = newAsset;
-            },
+                    )
+                    .toList(),
+                onChanged: (font) {
+                  Asset newAsset = Asset.clone(_asset);
+                  newAsset.font =
+                      font?.path ?? 'assets/fonts/Amaranth-Regular.ttf';
+                  context.read<DirectorBloc>().add(UpdateTextAsset(newAsset));
+                },
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
 class _FontSize extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
   final Asset _asset;
 
-  _FontSize(this._asset);
+  const _FontSize(this._asset);
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +152,7 @@ class _FontSize extends StatelessWidget {
             onChanged: (size) {
               Asset newAsset = Asset.clone(_asset);
               newAsset.fontSize = size;
-              directorService.editingTextAsset = newAsset;
+              context.read<DirectorBloc>().add(UpdateTextAsset(newAsset));
             },
           ),
         ],
@@ -157,13 +162,12 @@ class _FontSize extends StatelessWidget {
 }
 
 class _ColorField extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
   final String label;
   final String field;
   final int color;
   final double size;
 
-  _ColorField({
+  const _ColorField({
     this.label = 'Color',
     required this.field,
     this.color = 0,
@@ -190,7 +194,7 @@ class _ColorField extends StatelessWidget {
               ),
             ),
             onPressed: () {
-              directorService.editingColor = field;
+              context.read<DirectorBloc>().add(StartEditingColor(field));
             },
           ),
         ],

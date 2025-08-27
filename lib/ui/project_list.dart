@@ -1,7 +1,8 @@
 import 'dart:io';
+import 'package:flutter_video_editor_app/bloc/project/project_bloc.dart';
+import 'package:flutter_video_editor_app/bloc/project/project_event.dart';
+import 'package:flutter_video_editor_app/bloc/project/project_state.dart';
 import 'package:flutter_video_editor_app/model/project.dart';
-import 'package:flutter_video_editor_app/service/project_service.dart';
-import 'package:flutter_video_editor_app/service_locator.dart';
 import 'package:flutter_video_editor_app/ui/common/animated_dialog.dart';
 import 'package:flutter_video_editor_app/ui/director.dart';
 import 'package:flutter_video_editor_app/ui/generated_video_list.dart';
@@ -9,91 +10,128 @@ import 'package:flutter_video_editor_app/ui/project_edit.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dotted_border/dotted_border.dart';
 
 class ProjectList extends StatelessWidget {
-  final projectService = locator.get<ProjectService>();
+  const ProjectList({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    context.read<ProjectBloc>().add(LoadProjects());
+
     bool isLandscape =
         (MediaQuery.of(context).orientation == Orientation.landscape);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Open Director'),
+        title: const Text('Open Director'),
         actions: <Widget>[
           ElevatedButton.icon(
-            label: Text('Exit'),
-            icon: Icon(Icons.exit_to_app),
+            label: const Text('Exit'),
+            icon: const Icon(Icons.exit_to_app),
             onPressed: () {
               SystemChannels.platform.invokeMethod('SystemNavigator.pop');
             },
           ),
         ],
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          isLandscape
-              ? Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [_CreateProject(), ProjectListView()],
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [_CreateProject(), ProjectListView()],
-                ),
-        ],
-      ),
-    );
-  }
-}
+      body: BlocBuilder<ProjectBloc, ProjectState>(
+        builder: (context, state) {
+          if (state is ProjectLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-class ProjectListView extends StatelessWidget {
-  final projectService = locator.get<ProjectService>();
+          if (state is ProjectError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error, color: Colors.red, size: 64),
+                  const SizedBox(height: 16),
+                  Text('Error: ${state.message}'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () =>
+                        context.read<ProjectBloc>().add(RefreshProjects()),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
 
-  @override
-  Widget build(BuildContext context) {
-    bool isLandscape =
-        (MediaQuery.of(context).orientation == Orientation.landscape);
-    return Container(
-      height:
-          (MediaQuery.of(context).size.height - 200) * (isLandscape ? 1 : 0.82),
-      width: MediaQuery.of(context).size.width * (isLandscape ? 0.77 : 0.95),
-      child: StreamBuilder(
-        stream: projectService.projectListChanged$,
-        initialData: false,
-        builder: (BuildContext context, AsyncSnapshot<bool> layersChanged) {
-          return GridView.count(
-            crossAxisCount: 2,
-            childAspectRatio: 1.0,
-            mainAxisSpacing: 4.0,
-            crossAxisSpacing: 4.0,
-            scrollDirection: isLandscape ? Axis.horizontal : Axis.vertical,
-            children: projectService.projectList
-                .asMap()
-                .map((index, project) {
-                  return MapEntry(
-                    index,
-                    _ProjectCard(projectService.projectList[index], index),
-                  );
-                })
-                .values
-                .toList(),
-          );
+          if (state is ProjectLoaded) {
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                isLandscape
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _CreateProject(),
+                          _ProjectListView(
+                            projects: state.projects,
+                            isLandscape: isLandscape,
+                          ),
+                        ],
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _CreateProject(),
+                          _ProjectListView(
+                            projects: state.projects,
+                            isLandscape: isLandscape,
+                          ),
+                        ],
+                      ),
+              ],
+            );
+          }
+
+          return const Center(child: Text('Loading...'));
         },
       ),
     );
   }
 }
 
+class _ProjectListView extends StatelessWidget {
+  final List<Project> projects;
+  final bool isLandscape;
+
+  const _ProjectListView({required this.projects, required this.isLandscape});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height:
+          (MediaQuery.of(context).size.height - 200) * (isLandscape ? 1 : 0.82),
+      width: MediaQuery.of(context).size.width * (isLandscape ? 0.77 : 0.95),
+      child: GridView.count(
+        crossAxisCount: 2,
+        childAspectRatio: 1.0,
+        mainAxisSpacing: 4.0,
+        crossAxisSpacing: 4.0,
+        scrollDirection: isLandscape ? Axis.horizontal : Axis.vertical,
+        children: projects
+            .asMap()
+            .map((index, project) {
+              return MapEntry(index, _ProjectCard(project, index));
+            })
+            .values
+            .toList(),
+      ),
+    );
+  }
+}
+
 class _ProjectCard extends StatelessWidget {
-  final projectService = locator.get<ProjectService>();
   final Project project;
   final int index;
 
-  _ProjectCard(this.project, this.index);
+  const _ProjectCard(this.project, this.index);
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +208,9 @@ class _ProjectCard extends StatelessWidget {
                             },
                             button2Text: 'OK',
                             onPressedButton2: () {
-                              projectService.delete(index);
+                              context.read<ProjectBloc>().add(
+                                DeleteProject(project.id!),
+                              );
                               Navigator.of(context).pop();
                             },
                           );
@@ -242,8 +282,6 @@ class _ProjectCard extends StatelessWidget {
 }
 
 class _CreateProject extends StatelessWidget {
-  final projectService = locator.get<ProjectService>();
-
   @override
   Widget build(BuildContext context) {
     bool isLandscape =

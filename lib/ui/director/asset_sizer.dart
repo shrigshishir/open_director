@@ -1,62 +1,64 @@
 import 'dart:ui';
 import 'dart:core';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_video_editor_app/bloc/director/director_bloc.dart';
+import 'package:flutter_video_editor_app/bloc/director/director_state.dart';
 import 'package:flutter_video_editor_app/model/model.dart';
-import 'package:flutter_video_editor_app/service/director_service.dart';
-import 'package:flutter_video_editor_app/service_locator.dart';
 import 'package:flutter_video_editor_app/ui/director/params.dart';
 
 class AssetSizer extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
   final int layerIndex;
   final bool sizerEnd;
 
-  AssetSizer(this.layerIndex, this.sizerEnd, {Key? key}) : super(key: key);
+  const AssetSizer(this.layerIndex, this.sizerEnd, {Key? key})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: directorService.selected$,
-      initialData: Selected(-1, -1),
-      builder: (BuildContext context, AsyncSnapshot<Selected> selected) {
+    return BlocBuilder<DirectorBloc, DirectorState>(
+      builder: (context, state) {
+        if (state is! DirectorLoaded) {
+          return Container();
+        }
+
         Color color = Colors.transparent;
         double left = -50;
         IconData? iconData;
-        final data = selected.data;
-        if (data != null &&
-            data.layerIndex == layerIndex &&
-            data.assetIndex != -1 &&
-            !directorService.isDragging) {
+
+        if (state.selectedLayerIndex == layerIndex &&
+            state.selectedAssetIndex != -1 &&
+            layerIndex < state.layers.length &&
+            state.selectedAssetIndex < state.layers[layerIndex].assets.length) {
           Asset asset =
-              directorService.layers[layerIndex].assets[data.assetIndex];
+              state.layers[layerIndex].assets[state.selectedAssetIndex];
+
           if (asset.type == AssetType.text || asset.type == AssetType.image) {
-            left = asset.begin * directorService.pixelsPerSecond / 1000.0;
+            left = asset.begin * state.pixelsPerSecond / 1000.0;
+
             if (sizerEnd) {
-              left += asset.duration * directorService.pixelsPerSecond / 1000.0;
-              if (directorService.isSizerDraggingEnd) {
-                left += directorService.dxSizerDrag;
-              }
+              left += asset.duration * state.pixelsPerSecond / 1000.0;
+              // TODO: Add sizer drag logic when implemented in state
+              // if (state.isSizerDraggingEnd) {
+              //   left += state.dxSizerDrag;
+              // }
               if (left <
-                  (asset.begin + 1000) *
-                      directorService.pixelsPerSecond /
-                      1000.0) {
-                left =
-                    (asset.begin + 1000) *
-                    directorService.pixelsPerSecond /
-                    1000.0;
+                  (asset.begin + 1000) * state.pixelsPerSecond / 1000.0) {
+                left = (asset.begin + 1000) * state.pixelsPerSecond / 1000.0;
               }
               iconData = Icons.arrow_right;
             } else {
-              if (!directorService.isSizerDraggingEnd) {
-                left += directorService.dxSizerDrag;
-              }
+              // TODO: Add sizer drag logic when implemented in state
+              // if (!state.isSizerDraggingEnd) {
+              //   left += state.dxSizerDrag;
+              // }
               if (left >
                   (asset.begin + asset.duration - 1000) *
-                      directorService.pixelsPerSecond /
+                      state.pixelsPerSecond /
                       1000.0) {
                 left =
                     (asset.begin + asset.duration - 1000) *
-                    directorService.pixelsPerSecond /
+                    state.pixelsPerSecond /
                     1000.0;
               }
               if (left < 0) {
@@ -66,11 +68,12 @@ class AssetSizer extends StatelessWidget {
               iconData = Icons.arrow_left;
             }
 
-            if (directorService.dxSizerDrag == 0) {
-              color = Colors.pinkAccent;
-            } else {
-              color = Colors.greenAccent;
-            }
+            // TODO: Implement drag state detection
+            // if (state.dxSizerDrag == 0) {
+            color = Colors.pinkAccent;
+            // } else {
+            //   color = Colors.greenAccent;
+            // }
           }
         }
 
@@ -78,22 +81,27 @@ class AssetSizer extends StatelessWidget {
           left: MediaQuery.of(context).size.width / 2 + left,
           child: GestureDetector(
             child: Container(
-              height: Params.getLayerHeight(
-                context,
-                directorService.layers[layerIndex].type,
-              ),
+              height: layerIndex < state.layers.length
+                  ? Params.getLayerHeight(
+                      context,
+                      state.layers[layerIndex].type,
+                    )
+                  : 50,
               width: 30,
               color: color,
               child: iconData != null
                   ? Icon(iconData, size: 30, color: Colors.white)
                   : null,
             ),
-            onHorizontalDragStart: (detail) =>
-                directorService.sizerDragStart(sizerEnd),
-            onHorizontalDragUpdate: (detail) =>
-                directorService.sizerDragUpdate(sizerEnd, detail.delta.dx),
-            onHorizontalDragEnd: (detail) =>
-                directorService.sizerDragEnd(sizerEnd),
+            onHorizontalDragStart: (detail) {
+              // TODO: Implement sizer drag start event when available
+            },
+            onHorizontalDragUpdate: (detail) {
+              // TODO: Implement sizer drag update event when available
+            },
+            onHorizontalDragEnd: (detail) {
+              // TODO: Implement sizer drag end event when available
+            },
           ),
         );
       },

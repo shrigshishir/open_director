@@ -1,17 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_video_editor_app/bloc/project/project_bloc.dart';
+import 'package:flutter_video_editor_app/bloc/project/project_event.dart';
 import 'package:flutter_video_editor_app/model/project.dart';
-import 'package:flutter_video_editor_app/service/project_service.dart';
-import 'package:flutter_video_editor_app/service_locator.dart';
 import 'package:flutter_video_editor_app/ui/director.dart';
 
-class ProjectEdit extends StatelessWidget {
-  final projectService = locator.get<ProjectService>();
+class ProjectEdit extends StatefulWidget {
+  final Project? project;
 
-  ProjectEdit(Project? project) {
-    if (project == null) {
-      projectService.project = projectService.createNew();
+  const ProjectEdit(this.project, {Key? key}) : super(key: key);
+
+  @override
+  _ProjectEditState createState() => _ProjectEditState();
+}
+
+class _ProjectEditState extends State<ProjectEdit> {
+  late Project _editingProject;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.project == null) {
+      // Create a new project
+      _editingProject = Project(
+        title: '',
+        description: '',
+        date: DateTime.now(),
+        duration: 0,
+      );
     } else {
-      projectService.project = project;
+      // Edit existing project - create a copy to avoid modifying the original
+      _editingProject = Project(
+        title: widget.project!.title,
+        description: widget.project!.description,
+        date: widget.project!.date,
+        duration: widget.project!.duration,
+        layersJson: widget.project!.layersJson,
+      );
+      _editingProject.id = widget.project!.id;
     }
   }
 
@@ -19,21 +45,36 @@ class ProjectEdit extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          (projectService.project?.id == null) ? 'New video' : 'Edit title',
-        ),
+        title: Text((_editingProject.id == null) ? 'New video' : 'Edit title'),
       ),
-      body: _ProjectEditForm(),
+      body: _ProjectEditForm(_editingProject),
       resizeToAvoidBottomInset: true,
     );
   }
 }
 
-class _ProjectEditForm extends StatelessWidget {
-  final projectService = locator.get<ProjectService>();
-  // Neccesary static
+class _ProjectEditForm extends StatefulWidget {
+  final Project project;
+
+  const _ProjectEditForm(this.project, {Key? key}) : super(key: key);
+
+  @override
+  _ProjectEditFormState createState() => _ProjectEditFormState();
+}
+
+class _ProjectEditFormState extends State<_ProjectEditForm> {
+  // Necessary static
   // https://github.com/flutter/flutter/issues/20042
   static final _formKey = GlobalKey<FormState>();
+  late String _title;
+  late String _description;
+
+  @override
+  void initState() {
+    super.initState();
+    _title = widget.project.title;
+    _description = widget.project.description ?? '';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,11 +93,10 @@ class _ProjectEditForm extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 TextFormField(
-                  initialValue: projectService.project?.title,
+                  initialValue: widget.project.title,
                   maxLength: 75,
                   onSaved: (value) {
-                    projectService.project?.title =
-                        value ?? "New project title";
+                    _title = value ?? "New project title";
                   },
                   decoration: InputDecoration(
                     labelText: 'Title',
@@ -72,12 +112,11 @@ class _ProjectEditForm extends StatelessWidget {
                 ),
                 Padding(padding: EdgeInsets.only(top: 10)),
                 TextFormField(
-                  initialValue: projectService.project?.description,
+                  initialValue: widget.project.description,
                   maxLines: 3,
                   maxLength: 1000,
                   onSaved: (value) {
-                    projectService.project?.description =
-                        value ?? "This is a new project description";
+                    _description = value ?? "This is a new project description";
                   },
                   decoration: InputDecoration(
                     labelText: 'Description (optional)',
@@ -104,22 +143,34 @@ class _ProjectEditForm extends StatelessWidget {
                           _formKey.currentState?.save();
 
                           // To hide soft keyboard
-                          FocusScope.of(context).requestFocus(new FocusNode());
+                          FocusScope.of(context).requestFocus(FocusNode());
 
-                          if (projectService.project?.id == null) {
-                            await projectService.insert(
-                              projectService.project!,
+                          // Create updated project
+                          final updatedProject = Project(
+                            title: _title,
+                            description: _description,
+                            date: widget.project.date,
+                            duration: widget.project.duration,
+                            layersJson: widget.project.layersJson,
+                          );
+                          updatedProject.id = widget.project.id;
+
+                          if (widget.project.id == null) {
+                            // Create new project
+                            context.read<ProjectBloc>().add(
+                              CreateProject(updatedProject),
                             );
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
                                 builder: (context) =>
-                                    DirectorScreen(projectService.project!),
+                                    DirectorScreen(updatedProject),
                               ),
                             );
                           } else {
-                            await projectService.update(
-                              projectService.project!,
+                            // Update existing project
+                            context.read<ProjectBloc>().add(
+                              UpdateProject(updatedProject),
                             );
                             Navigator.pop(context);
                           }
@@ -135,7 +186,7 @@ class _ProjectEditForm extends StatelessWidget {
       ),
       onTap: () {
         // To hide soft keyboard
-        FocusScope.of(context).requestFocus(new FocusNode());
+        FocusScope.of(context).requestFocus(FocusNode());
       },
     );
   }

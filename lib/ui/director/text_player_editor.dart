@@ -1,44 +1,46 @@
 import 'dart:ui';
 import 'dart:core';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_video_editor_app/bloc/director/director_bloc.dart';
+import 'package:flutter_video_editor_app/bloc/director/director_event.dart';
 import 'package:flutter_video_editor_app/model/model.dart';
-import 'package:flutter_video_editor_app/service/director_service.dart';
-import 'package:flutter_video_editor_app/service_locator.dart';
 import 'package:flutter_video_editor_app/ui/director/params.dart';
 import 'package:flutter_video_editor_app/ui/director/text_form.dart';
 
 class TextPlayerEditor extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
-  final Asset? _asset;
+  final Asset _asset;
 
-  TextPlayerEditor(this._asset, {Key? key}) : super(key: key);
+  const TextPlayerEditor(this._asset, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    if (_asset == null) return Container();
     var txtController = TextEditingController();
     txtController.text = _asset.title;
     Font font = Font.getByPath(_asset.font);
 
     return GestureDetector(
       onPanUpdate: (details) {
-        if (_asset == null) return;
-        // Not create clone because it is too slow
-        _asset.x += details.delta.dx / Params.getPlayerWidth(context);
-        _asset.y += details.delta.dy / Params.getPlayerHeight(context);
-        if (_asset.x < 0) {
-          _asset.x = 0;
+        // Create a new asset with updated position
+        Asset newAsset = Asset.clone(_asset);
+        newAsset.x += details.delta.dx / Params.getPlayerWidth(context);
+        newAsset.y += details.delta.dy / Params.getPlayerHeight(context);
+
+        // Clamp values to bounds
+        if (newAsset.x < 0) {
+          newAsset.x = 0;
         }
-        if (_asset.x > 0.85) {
-          _asset.x = 0.85;
+        if (newAsset.x > 0.85) {
+          newAsset.x = 0.85;
         }
-        if (_asset.y < 0) {
-          _asset.y = 0;
+        if (newAsset.y < 0) {
+          newAsset.y = 0;
         }
-        if (_asset.y > 0.85) {
-          _asset.y = 0.85;
+        if (newAsset.y > 0.85) {
+          newAsset.y = 0.85;
         }
-        directorService.editingTextAsset = _asset;
+
+        context.read<DirectorBloc>().add(UpdateTextAsset(newAsset));
       },
       child: Container(
         width: Params.getPlayerWidth(context),
@@ -78,7 +80,9 @@ class TextPlayerEditor extends StatelessWidget {
             backgroundColor: Color(_asset.boxcolor),
           ),
           onChanged: (newVal) {
-            directorService.editingTextAsset?.title = newVal;
+            Asset newAsset = Asset.clone(_asset);
+            newAsset.title = newVal;
+            context.read<DirectorBloc>().add(UpdateTextAsset(newAsset));
           },
         ),
       ),
