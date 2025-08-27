@@ -4,6 +4,7 @@ import 'package:sqflite/sqflite.dart';
 
 class ProjectDao {
   late Database db;
+  bool _isInitialized = false;
 
   final migrationScripts = [
     '''
@@ -30,6 +31,8 @@ create table generatedVideo (
   ];
 
   Future<void> open() async {
+    if (_isInitialized) return;
+
     db = await openDatabase(
       'project',
       version: migrationScripts.length,
@@ -39,9 +42,17 @@ create table generatedVideo (
         }
       },
     );
+    _isInitialized = true;
+  }
+
+  Future<void> _ensureInitialized() async {
+    if (!_isInitialized) {
+      await open();
+    }
   }
 
   Future<Project> insert(Project project) async {
+    await _ensureInitialized();
     project.id = await db.insert('project', project.toMap());
     return project;
   }
@@ -49,6 +60,7 @@ create table generatedVideo (
   Future<GeneratedVideo> insertGeneratedVideo(
     GeneratedVideo generatedVideo,
   ) async {
+    await _ensureInitialized();
     generatedVideo.id = await db.insert(
       'generatedVideo',
       generatedVideo.toMap(),
@@ -57,6 +69,7 @@ create table generatedVideo (
   }
 
   Future<Project?> get(int id) async {
+    await _ensureInitialized();
     List<Map<String, Object?>> maps = await db.query(
       'project',
       columns: [
@@ -78,6 +91,7 @@ create table generatedVideo (
   }
 
   Future<List<Project>> findAll() async {
+    await _ensureInitialized();
     List<Map<String, Object?>> maps = await db.query(
       'project',
       columns: [
@@ -94,6 +108,7 @@ create table generatedVideo (
   }
 
   Future<List<GeneratedVideo>> findAllGeneratedVideo(int projectId) async {
+    await _ensureInitialized();
     List<Map<String, Object?>> maps = await db.query(
       'generatedVideo',
       columns: ['_id', 'projectId', 'path', 'date', 'resolution', 'thumbnail'],
@@ -105,18 +120,22 @@ create table generatedVideo (
   }
 
   Future<int> delete(int id) async {
+    await _ensureInitialized();
     return await db.delete('project', where: '_id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteGeneratedVideo(int id) async {
+    await _ensureInitialized();
     return await db.delete('generatedVideo', where: '_id = ?', whereArgs: [id]);
   }
 
   Future<int> deleteAll() async {
+    await _ensureInitialized();
     return await db.delete('project');
   }
 
   Future<int> update(Project project) async {
+    await _ensureInitialized();
     return await db.update(
       'project',
       project.toMap(),
@@ -125,5 +144,10 @@ create table generatedVideo (
     );
   }
 
-  Future<void> close() async => db.close();
+  Future<void> close() async {
+    if (_isInitialized) {
+      await db.close();
+      _isInitialized = false;
+    }
+  }
 }

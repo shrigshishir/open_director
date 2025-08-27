@@ -148,42 +148,46 @@ class _Director extends StatelessWidget {
                   children: <Widget>[AppBar1(), const _Video(), AppBar2()],
                 ),
         ),
-        Stack(
-          alignment: const Alignment(0, -1),
-          children: <Widget>[
-            SingleChildScrollView(
-              child: Stack(
-                alignment: const Alignment(-1, -1),
-                children: <Widget>[
-                  GestureDetector(
-                    child: NotificationListener<ScrollNotification>(
-                      onNotification: (ScrollNotification scrollState) {
-                        if (scrollState is ScrollEndNotification) {
-                          directorService.endScroll();
-                        }
-                        return false;
-                      },
-                      child: const _TimeLine(),
-                    ),
-                    onScaleStart: (ScaleStartDetails details) {
-                      directorService.scaleStart();
-                    },
-                    onScaleUpdate: (ScaleUpdateDetails details) {
-                      directorService.scaleUpdate(details.horizontalScale);
-                    },
-                    onScaleEnd: (ScaleEndDetails details) {
-                      directorService.scaleEnd();
-                    },
+        Expanded(
+          child: Container(
+            child: Stack(
+              alignment: const Alignment(0, -1),
+              children: <Widget>[
+                SingleChildScrollView(
+                  child: Stack(
+                    alignment: const Alignment(-1, -1),
+                    children: <Widget>[
+                      GestureDetector(
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: (ScrollNotification scrollState) {
+                            if (scrollState is ScrollEndNotification) {
+                              directorService.endScroll();
+                            }
+                            return false;
+                          },
+                          child: const _TimeLine(),
+                        ),
+                        onScaleStart: (ScaleStartDetails details) {
+                          directorService.scaleStart();
+                        },
+                        onScaleUpdate: (ScaleUpdateDetails details) {
+                          directorService.scaleUpdate(details.horizontalScale);
+                        },
+                        onScaleEnd: (ScaleEndDetails details) {
+                          directorService.scaleEnd();
+                        },
+                      ),
+                      const _LayerHeaders(),
+                    ],
                   ),
-                  const _LayerHeaders(),
-                ],
-              ),
+                ),
+                const _PositionLine(),
+                const _PositionMarker(),
+                TextAssetEditor(),
+                ColorEditor(),
+              ],
             ),
-            const _PositionLine(),
-            const _PositionMarker(),
-            TextAssetEditor(),
-            ColorEditor(),
-          ],
+          ),
         ),
       ],
     );
@@ -415,7 +419,11 @@ class _Video extends StatelessWidget {
         if (directorService.layerPlayers.isEmpty) {
           return backgroundContainer;
         }
-        int assetIndex = directorService.layerPlayers[0]!.currentAssetIndex;
+        final layerPlayer = directorService.layerPlayers[0];
+        if (layerPlayer == null) {
+          return backgroundContainer;
+        }
+        int assetIndex = layerPlayer.currentAssetIndex;
         if (assetIndex == -1 ||
             assetIndex >= directorService.layers[0].assets.length) {
           return backgroundContainer;
@@ -428,9 +436,7 @@ class _Video extends StatelessWidget {
             children: [
               backgroundContainer,
               (type == AssetType.video)
-                  ? VideoPlayer(
-                      directorService.layerPlayers[0]!.videoController,
-                    )
+                  ? VideoPlayer(layerPlayer.videoController!)
                   : _ImagePlayer(directorService.layers[0].assets[assetIndex]),
               const _TextPlayer(),
             ],
@@ -452,6 +458,10 @@ class _ImagePlayer extends StatelessWidget {
       stream: directorService.position$,
       initialData: 0,
       builder: (BuildContext context, AsyncSnapshot<int> position) {
+        if (directorService.layerPlayers.isEmpty ||
+            directorService.layerPlayers[0] == null) {
+          return Container();
+        }
         int assetIndex = directorService.layerPlayers[0]!.currentAssetIndex;
         double ratio =
             (directorService.position -
@@ -539,9 +549,7 @@ class _TextPlayer extends StatelessWidget {
       initialData: null,
       builder: (BuildContext context, AsyncSnapshot<Asset?> editingTextAsset) {
         Asset? asset = editingTextAsset.data;
-        if (asset == null) {
-          asset = directorService.getAssetByPosition(1);
-        }
+        asset ??= directorService.getAssetByPosition(1);
         if (asset == null || asset.type != AssetType.text) {
           return Container();
         }
@@ -631,8 +639,8 @@ class _LayerAssets extends StatelessWidget {
           ),
         ),
         AssetSelection(layerIndex),
-        AssetSizer(layerIndex, false),
-        AssetSizer(layerIndex, true),
+        // AssetSizer(layerIndex, false),
+        // AssetSizer(layerIndex, true),
         (layerIndex != 1) ? DragClosest(layerIndex) : Container(),
       ],
     );

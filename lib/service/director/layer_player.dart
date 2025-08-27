@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_video_editor_app/model/model.dart';
 import 'package:video_player/video_player.dart';
 
@@ -7,8 +8,8 @@ class LayerPlayer {
 
   int _newPosition = 0;
 
-  late final VideoPlayerController _videoController;
-  VideoPlayerController get videoController => _videoController;
+  VideoPlayerController? _videoController;
+  VideoPlayerController? get videoController => _videoController;
 
   void Function(int)? _onMove;
   void Function()? _onJump;
@@ -17,25 +18,55 @@ class LayerPlayer {
   LayerPlayer(this.layer);
 
   Future<void> initialize() async {
-    _videoController = VideoPlayerController.playList();
-    await _videoController.initialize();
-    for (int i = 0; i < layer.assets.length; i++) {
-      await addMediaSource(i, layer.assets[i]);
+    // Initialize with the first video asset if available
+    if (layer.assets.isNotEmpty) {
+      await _initializeForAsset(0);
+    }
+  }
+
+  Future<void> _initializeForAsset(int assetIndex) async {
+    if (assetIndex < 0 || assetIndex >= layer.assets.length) return;
+
+    final asset = layer.assets[assetIndex];
+
+    // Dispose previous controller if exists
+    if (_videoController != null) {
+      await _videoController!.dispose();
+      _videoController = null;
+    }
+
+    // Only create controller for video assets
+    if (asset.type == AssetType.video && !asset.deleted) {
+      try {
+        _videoController = VideoPlayerController.file(File(asset.srcPath));
+        await _videoController!.initialize();
+      } catch (e) {
+        print('Error initializing video controller for ${asset.srcPath}: $e');
+        _videoController = null;
+      }
     }
   }
 
   Future<void> preview(int pos) async {
     currentAssetIndex = getAssetByPosition(pos);
     if (currentAssetIndex == -1) return;
-    if (layer.assets[currentAssetIndex].type != AssetType.video) return;
-    _newPosition = pos - layer.assets[currentAssetIndex].begin;
-    await _videoController.setVolume(0);
-    await _videoController.seekTo(
-      currentAssetIndex,
-      Duration(milliseconds: _newPosition),
-    );
-    await _videoController.play();
-    await _videoController.pause();
+
+    final asset = layer.assets[currentAssetIndex];
+    if (asset.type != AssetType.video) return;
+
+    // Initialize controller for this asset if needed
+    await _initializeForAsset(currentAssetIndex);
+
+    if (_videoController == null) return;
+
+    _newPosition = pos - asset.begin;
+    await _videoController!.setVolume(0);
+
+    // Seek to position within the asset (considering cutFrom offset)
+    final seekPosition = Duration(milliseconds: asset.cutFrom + _newPosition);
+    await _videoController!.seekTo(seekPosition);
+    await _videoController!.play();
+    await _videoController!.pause();
   }
 
   Future<void> play(
@@ -47,22 +78,33 @@ class LayerPlayer {
     _onMove = onMove;
     _onJump = onJump;
     _onEnd = onEnd;
+
     currentAssetIndex = getAssetByPosition(pos);
     if (currentAssetIndex == -1) return;
-    await _videoController.setVolume(layer.volume ?? 1.0);
-    _newPosition = pos - layer.assets[currentAssetIndex].begin;
-    await _videoController.seekTo(
-      currentAssetIndex,
-      Duration(milliseconds: _newPosition),
-    );
-    await _videoController.play();
-    _videoController.addListener(_videoListener);
+
+    final asset = layer.assets[currentAssetIndex];
+    if (asset.type != AssetType.video) return;
+
+    // Initialize controller for this asset if needed
+    await _initializeForAsset(currentAssetIndex);
+
+    if (_videoController == null) return;
+
+    await _videoController!.setVolume(layer.volume ?? 1.0);
+    _newPosition = pos - asset.begin;
+
+    // Seek to position within the asset (considering cutFrom offset)
+    final seekPosition = Duration(milliseconds: asset.cutFrom + _newPosition);
+    await _videoController!.seekTo(seekPosition);
+    await _videoController!.play();
+    _videoController!.addListener(_videoListener);
   }
 
   int getAssetByPosition(int? pos) {
     if (pos == null) return -1;
     for (int i = 0; i < layer.assets.length; i++) {
-      if (layer.assets[i].begin + layer.assets[i].duration - 1 >= pos) {
+      int assetEnd = layer.assets[i].begin + layer.assets[i].duration - 1;
+      if (layer.assets[i].begin <= pos && assetEnd >= pos) {
         return i;
       }
     }
@@ -70,69 +112,81 @@ class LayerPlayer {
   }
 
   void _videoListener() async {
-    _newPosition =
-        _videoController.value.position.inMilliseconds +
-        layer.assets[_videoController.value.windowIndex].begin;
+    if (_videoController == null || currentAssetIndex == -1) return;
+
+    final asset = layer.assets[currentAssetIndex];
+    final videoPosition = _videoController!.value.position.inMilliseconds;
+
+    // Calculate the actual position in the timeline
+    _newPosition = (videoPosition - asset.cutFrom) + asset.begin;
+
     if (_onMove != null) {
       _onMove!(_newPosition);
     }
 
-    if (currentAssetIndex != _videoController.value.windowIndex) {
-      currentAssetIndex = _videoController.value.windowIndex;
-      if (_onJump != null) {
-        _onJump!();
-      }
-    }
+    // Check if we've reached the end of the current asset
+    final assetDuration = asset.duration;
+    final relativePosition = videoPosition - asset.cutFrom;
 
-    // 100 because of the period of position updating
     bool isAtEnd =
-        (!_videoController.value.isPlaying &&
-        _videoController.value.position.inMilliseconds >=
-            layer.assets[_videoController.value.windowIndex].duration - 100);
+        (!_videoController!.value.isPlaying &&
+        relativePosition >= assetDuration - 100);
 
     if (isAtEnd) {
       await stop();
-      currentAssetIndex = -1;
-      if (_onJump != null) {
-        _onJump!();
-      }
-      if (_onEnd != null) {
-        _onEnd!();
+
+      // Check if there's a next asset to play
+      int nextAssetIndex = currentAssetIndex + 1;
+      if (nextAssetIndex < layer.assets.length) {
+        // Move to next asset
+        currentAssetIndex = nextAssetIndex;
+        if (_onJump != null) {
+          _onJump!();
+        }
+
+        // Auto-play next asset if it's at the current timeline position
+        final nextAsset = layer.assets[nextAssetIndex];
+        if (nextAsset.begin <= _newPosition) {
+          await _initializeForAsset(nextAssetIndex);
+          if (_videoController != null) {
+            await _videoController!.play();
+            _videoController!.addListener(_videoListener);
+          }
+        }
+      } else {
+        // End of all assets
+        currentAssetIndex = -1;
+        if (_onJump != null) {
+          _onJump!();
+        }
+        if (_onEnd != null) {
+          _onEnd!();
+        }
       }
     }
   }
 
   Future<void> stop() async {
-    // First remove listener because listener check status
-    _videoController.removeListener(_videoListener);
-    await _videoController.pause();
-  }
-
-  Future<void> addMediaSource(int index, Asset asset) async {
-    if (asset.type == AssetType.image) {
-      await _videoController.addMediaSource(
-        index,
-        'assets/blank-1h.mp4',
-        asset.cutFrom,
-        asset.cutFrom + asset.duration,
-        isAsset: true,
-      );
-    } else {
-      await _videoController.addMediaSource(
-        index,
-        asset.deleted ? 'assets/blank-1h.mp4' : asset.srcPath,
-        asset.cutFrom,
-        asset.cutFrom + asset.duration,
-        isAsset: false,
-      );
+    if (_videoController != null) {
+      _videoController!.removeListener(_videoListener);
+      await _videoController!.pause();
     }
   }
 
+  Future<void> addMediaSource(int index, Asset asset) async {
+    // This method is no longer needed with standard video_player
+    // Each asset will have its own controller initialized when needed
+  }
+
   Future<void> removeMediaSource(int index) async {
-    await _videoController.removeMediaSource(index);
+    // This method is no longer needed with standard video_player
+    // Controllers are managed per asset
   }
 
   Future<void> dispose() async {
-    await _videoController.dispose();
+    if (_videoController != null) {
+      await _videoController!.dispose();
+      _videoController = null;
+    }
   }
 }

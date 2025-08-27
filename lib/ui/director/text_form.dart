@@ -8,7 +8,7 @@ class TextForm extends StatelessWidget {
   final directorService = locator.get<DirectorService>();
   final Asset _asset;
 
-  TextForm(this._asset, {Key? key}) : super(key: key);
+  TextForm(this._asset, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +16,7 @@ class TextForm extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SubMenu(),
-        Container(
+        SizedBox(
           width: MediaQuery.of(context).size.width - 120,
           child: Wrap(
             spacing: 0.0,
@@ -80,7 +80,7 @@ class _FontFamily extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 290,
       child: Row(
         children: [
@@ -143,7 +143,7 @@ class _FontSize extends StatelessWidget {
           Slider(
             min: 0.03,
             max: 1,
-            value: math.sqrt(_asset?.fontSize ?? 1),
+            value: math.sqrt(_asset.fontSize),
             onChanged: (size) {
               Asset newAsset = Asset.clone(_asset);
               newAsset.fontSize = size;

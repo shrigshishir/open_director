@@ -24,6 +24,7 @@ class DirectorService {
   final projectDao = locator.get<ProjectDao>();
 
   late List<Layer> layers;
+  bool _isInitialized = false;
 
   // Flags for concurrency
   bool isEntering = false;
@@ -73,7 +74,10 @@ class DirectorService {
   Stream<Selected> get selected$ => _selected.stream;
   Selected get selected => _selected.value;
   Asset? get assetSelected {
-    if (selected.layerIndex == -1 || selected.assetIndex == -1) return null;
+    if (!_isInitialized ||
+        selected.layerIndex == -1 ||
+        selected.assetIndex == -1)
+      return null;
     return layers[selected.layerIndex].assets[selected.assetIndex];
   }
 
@@ -123,6 +127,7 @@ class DirectorService {
   }
 
   int get duration {
+    if (!_isInitialized) return 0;
     int maxDuration = 0;
     for (int i = 0; i < layers.length; i++) {
       for (int j = layers[i].assets.length - 1; j >= 0; j--) {
@@ -179,6 +184,7 @@ class DirectorService {
         ).toList();
         _filesNotExist.add(checkSomeFileNotExists());
       }
+      _isInitialized = true;
       _layersChanged.add(true);
 
       layerPlayers = List<LayerPlayer?>.filled(
@@ -200,6 +206,7 @@ class DirectorService {
   }
 
   checkSomeFileNotExists() {
+    if (!_isInitialized) return false;
     bool _someFileNotExists = false;
     for (int i = 0; i < layers.length; i++) {
       for (int j = 0; j < layers[i].assets.length; j++) {
@@ -234,7 +241,7 @@ class DirectorService {
   }
 
   _saveProject() {
-    if (layers.isEmpty || project == null) return;
+    if (!_isInitialized || layers.isEmpty || project == null) return;
     project!.layersJson = json.encode(layers);
     project!.imagePath = layers[0].assets.isNotEmpty
         ? getFirstThumbnailMedPath()
@@ -294,8 +301,8 @@ class DirectorService {
       _filesNotExist.add(true);
       return;
     }
-    if (isOperating) return;
-    if (position >= duration) return;
+    // if (isOperating) return;
+    // if (position >= duration) return;
     logger.i('DirectorService.play()');
     isPlaying = true;
     scrollController.removeListener(_listenerScrollController);
@@ -331,7 +338,7 @@ class DirectorService {
   }
 
   stop() async {
-    if ((isOperating && !isPlaying) || !isPlaying) return;
+    // if ((isOperating && !isPlaying) || !isPlaying) return;
     print('>> DirectorService.stop()');
     for (int i = 0; i < layers.length; i++) {
       if (i == 1) continue;
@@ -358,7 +365,7 @@ class DirectorService {
   }
 
   add(AssetType assetType) async {
-    if (isOperating) return;
+    // if (isOperating) return;
     isAdding = true;
     print('>> DirectorService.add($assetType)');
 

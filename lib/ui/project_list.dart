@@ -59,7 +59,7 @@ class ProjectListView extends StatelessWidget {
         (MediaQuery.of(context).orientation == Orientation.landscape);
     return Container(
       height:
-          (MediaQuery.of(context).size.height - 100) * (isLandscape ? 1 : 0.82),
+          (MediaQuery.of(context).size.height - 200) * (isLandscape ? 1 : 0.82),
       width: MediaQuery.of(context).size.width * (isLandscape ? 0.77 : 0.95),
       child: StreamBuilder(
         stream: projectService.projectListChanged$,
