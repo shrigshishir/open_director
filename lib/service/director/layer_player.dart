@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter_video_editor_app/model/model.dart';
 import 'package:video_player/video_player.dart';
 
@@ -7,6 +8,7 @@ class LayerPlayer {
   int currentAssetIndex = -1;
 
   int _newPosition = 0;
+  Timer? _imageTimer;
 
   VideoPlayerController? _videoController;
   VideoPlayerController? get videoController => _videoController;
@@ -38,7 +40,33 @@ class LayerPlayer {
     // Only create controller for video assets
     if (asset.type == AssetType.video && !asset.deleted) {
       try {
-        _videoController = VideoPlayerController.file(File(asset.srcPath));
+        // Additional check: verify the file exists and has valid video extension
+        final file = File(asset.srcPath);
+        if (!await file.exists()) {
+          print('Video file does not exist: ${asset.srcPath}');
+          return;
+        }
+
+        final extension = asset.srcPath.toLowerCase().split('.').last;
+        final videoExtensions = [
+          'mp4',
+          'mov',
+          'avi',
+          'mkv',
+          'wmv',
+          'flv',
+          '3gp',
+          'm4v',
+        ];
+
+        if (!videoExtensions.contains(extension)) {
+          print(
+            'File does not have video extension: ${asset.srcPath} (extension: $extension)',
+          );
+          return;
+        }
+
+        _videoController = VideoPlayerController.file(file);
         await _videoController!.initialize();
       } catch (e) {
         print('Error initializing video controller for ${asset.srcPath}: $e');
@@ -52,6 +80,12 @@ class LayerPlayer {
     if (currentAssetIndex == -1) return;
 
     final asset = layer.assets[currentAssetIndex];
+
+    // For image assets, we only need to set the currentAssetIndex
+    if (asset.type == AssetType.image) {
+      return;
+    }
+
     if (asset.type != AssetType.video) return;
 
     // Initialize controller for this asset if needed
@@ -83,6 +117,13 @@ class LayerPlayer {
     if (currentAssetIndex == -1) return;
 
     final asset = layer.assets[currentAssetIndex];
+
+    // For image assets, use timer-based position updates
+    if (asset.type == AssetType.image) {
+      _startImagePlayback(pos, asset);
+      return;
+    }
+
     if (asset.type != AssetType.video) return;
 
     // Initialize controller for this asset if needed
@@ -98,6 +139,52 @@ class LayerPlayer {
     await _videoController!.seekTo(seekPosition);
     await _videoController!.play();
     _videoController!.addListener(_videoListener);
+  }
+
+  void _startImagePlayback(int startPos, Asset asset) {
+    _newPosition = startPos;
+    const int frameRate = 30; // 30 FPS for smooth playback
+    const int updateInterval = 1000 ~/ frameRate; // ~33ms per frame
+
+    _imageTimer = Timer.periodic(Duration(milliseconds: updateInterval), (
+      timer,
+    ) {
+      _newPosition += updateInterval;
+
+      if (_onMove != null) {
+        _onMove!(_newPosition);
+      }
+
+      // Check if we've reached the end of the current image asset
+      if (_newPosition >= asset.begin + asset.duration) {
+        timer.cancel();
+        _imageTimer = null;
+
+        // Check if there's a next asset
+        int nextAssetIndex = currentAssetIndex + 1;
+        if (nextAssetIndex < layer.assets.length) {
+          currentAssetIndex = nextAssetIndex;
+          final nextAsset = layer.assets[nextAssetIndex];
+
+          if (nextAsset.type == AssetType.image) {
+            // Continue with next image
+            _startImagePlayback(nextAsset.begin, nextAsset);
+          } else if (nextAsset.type == AssetType.video) {
+            // Switch to video playback
+            play(nextAsset.begin);
+          }
+        } else {
+          // End of all assets
+          currentAssetIndex = -1;
+          if (_onJump != null) {
+            _onJump!();
+          }
+          if (_onEnd != null) {
+            _onEnd!();
+          }
+        }
+      }
+    });
   }
 
   int getAssetByPosition(int? pos) {
@@ -167,6 +254,13 @@ class LayerPlayer {
   }
 
   Future<void> stop() async {
+    // Stop image timer if running
+    if (_imageTimer != null) {
+      _imageTimer!.cancel();
+      _imageTimer = null;
+    }
+
+    // Stop video if playing
     if (_videoController != null) {
       _videoController!.removeListener(_videoListener);
       await _videoController!.pause();
@@ -184,6 +278,13 @@ class LayerPlayer {
   }
 
   Future<void> dispose() async {
+    // Clean up image timer
+    if (_imageTimer != null) {
+      _imageTimer!.cancel();
+      _imageTimer = null;
+    }
+
+    // Clean up video controller
     if (_videoController != null) {
       await _videoController!.dispose();
       _videoController = null;

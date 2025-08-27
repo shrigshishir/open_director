@@ -434,7 +434,7 @@ class _Video extends StatelessWidget {
           child: Stack(
             children: [
               backgroundContainer,
-              (type == AssetType.video)
+              (type == AssetType.video && layerPlayer.videoController != null)
                   ? VideoPlayer(layerPlayer.videoController!)
                   : _ImagePlayer(directorService.layers[0].assets[assetIndex]),
               const _TextPlayer(),
@@ -462,6 +462,15 @@ class _ImagePlayer extends StatelessWidget {
           return Container();
         }
         int assetIndex = directorService.layerPlayers[0]!.currentAssetIndex;
+
+        // Additional safety checks
+        if (assetIndex == -1 ||
+            directorService.layers.isEmpty ||
+            directorService.layers[0].assets.isEmpty ||
+            assetIndex >= directorService.layers[0].assets.length) {
+          return Container();
+        }
+
         double ratio =
             (directorService.position -
                 directorService.layers[0].assets[assetIndex].begin) /

@@ -302,7 +302,7 @@ class DirectorService {
       return;
     }
     // if (isOperating) return;
-    // if (position >= duration) return;
+    if (position >= duration) return;
     logger.i('DirectorService.play()');
     isPlaying = true;
     scrollController.removeListener(_listenerScrollController);
@@ -631,11 +631,58 @@ class DirectorService {
   }
 
   _addAssetToLayer(int layerIndex, AssetType type, String srcPath) async {
-    print('_addAssetToLayer: $srcPath');
+    print('_addAssetToLayer: type=$type, srcPath=$srcPath');
+
+    // Verify file exists
+    final file = File(srcPath);
+    if (!await file.exists()) {
+      print('ERROR: File does not exist: $srcPath');
+      return;
+    }
+
+    // Copy file to persistent location to avoid iOS temporary file cleanup
+    String persistentPath = await _copyToPersistentLocation(srcPath, type);
+    print('File copied to persistent location: $persistentPath');
+
+    // Verify asset type matches file extension
+    final extension = srcPath.toLowerCase().split('.').last;
+    if (type == AssetType.image) {
+      final imageExtensions = [
+        'jpg',
+        'jpeg',
+        'png',
+        'gif',
+        'bmp',
+        'webp',
+        'svg',
+        'heic',
+      ];
+      if (!imageExtensions.contains(extension)) {
+        print(
+          'WARNING: Image asset has non-image extension: $srcPath (extension: $extension)',
+        );
+      }
+    } else if (type == AssetType.video) {
+      final videoExtensions = [
+        'mp4',
+        'mov',
+        'avi',
+        'mkv',
+        'wmv',
+        'flv',
+        '3gp',
+        'm4v',
+      ];
+      if (!videoExtensions.contains(extension)) {
+        print(
+          'WARNING: Video asset has non-video extension: $srcPath (extension: $extension)',
+        );
+      }
+    }
 
     int assetDuration;
     if (type == AssetType.video || type == AssetType.audio) {
-      assetDuration = await generator.getVideoDuration(srcPath);
+      assetDuration = await generator.getVideoDuration(persistentPath);
     } else {
       assetDuration = 5000;
     }
@@ -643,7 +690,7 @@ class DirectorService {
     layers[layerIndex].assets.add(
       Asset(
         type: type,
-        srcPath: srcPath,
+        srcPath: persistentPath, // Use persistent path instead of original
         title: p.basename(srcPath),
         duration: assetDuration,
         begin: layers[layerIndex].assets.isEmpty
@@ -660,6 +707,43 @@ class DirectorService {
 
     _layersChanged.add(true);
     _appBar.add(true);
+  }
+
+  /// Copy file from temporary location to persistent app documents directory
+  Future<String> _copyToPersistentLocation(
+    String srcPath,
+    AssetType type,
+  ) async {
+    try {
+      // Get app documents directory
+      final appDocDir = await getApplicationDocumentsDirectory();
+
+      // Create subdirectory based on asset type
+      final subdirName = type == AssetType.image ? 'images' : 'videos';
+      final targetDir = Directory(p.join(appDocDir.path, 'media', subdirName));
+      await targetDir.create(recursive: true);
+
+      // Generate unique filename to avoid conflicts
+      final originalFile = File(srcPath);
+      final fileName = p.basename(srcPath);
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final extension = p.extension(fileName);
+      final baseName = p.basenameWithoutExtension(fileName);
+      final uniqueFileName = '${baseName}_$timestamp$extension';
+
+      // Create target file path
+      final targetPath = p.join(targetDir.path, uniqueFileName);
+
+      // Copy file
+      await originalFile.copy(targetPath);
+
+      print('File copied from $srcPath to $targetPath');
+      return targetPath;
+    } catch (e) {
+      print('ERROR copying file: $e');
+      // Return original path as fallback
+      return srcPath;
+    }
   }
 
   select(int layerIndex, int assetIndex) async {
