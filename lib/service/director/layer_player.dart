@@ -166,15 +166,24 @@ class LayerPlayer {
           currentAssetIndex = nextAssetIndex;
           final nextAsset = layer.assets[nextAssetIndex];
 
+          print(
+            'Image finished, moving to next asset: $nextAssetIndex, type: ${nextAsset.type}',
+          );
+
           if (nextAsset.type == AssetType.image) {
             // Continue with next image
             _startImagePlayback(nextAsset.begin, nextAsset);
           } else if (nextAsset.type == AssetType.video) {
             // Switch to video playback
-            play(nextAsset.begin);
+            _playVideoAsset(nextAsset.begin, nextAssetIndex);
+          }
+
+          // Notify about position jump but don't end playback
+          if (_onJump != null) {
+            _onJump!();
           }
         } else {
-          // End of all assets
+          // End of all assets - now we can call onEnd
           currentAssetIndex = -1;
           if (_onJump != null) {
             _onJump!();
@@ -185,6 +194,23 @@ class LayerPlayer {
         }
       }
     });
+  }
+
+  Future<void> _playVideoAsset(int startPos, int assetIndex) async {
+    await _initializeForAsset(assetIndex);
+    if (_videoController != null) {
+      final asset = layer.assets[assetIndex];
+      await _videoController!.setVolume(layer.volume ?? 1.0);
+      _newPosition = startPos;
+
+      // Seek to position within the asset (considering cutFrom offset)
+      final seekPosition = Duration(
+        milliseconds: asset.cutFrom + (startPos - asset.begin),
+      );
+      await _videoController!.seekTo(seekPosition);
+      await _videoController!.play();
+      _videoController!.addListener(_videoListener);
+    }
   }
 
   int getAssetByPosition(int? pos) {
@@ -220,28 +246,40 @@ class LayerPlayer {
         relativePosition >= assetDuration - 100);
 
     if (isAtEnd) {
-      await stop();
+      // Remove listener to prevent multiple triggers
+      _videoController!.removeListener(_videoListener);
+      await _videoController!.pause();
 
       // Check if there's a next asset to play
       int nextAssetIndex = currentAssetIndex + 1;
       if (nextAssetIndex < layer.assets.length) {
         // Move to next asset
         currentAssetIndex = nextAssetIndex;
-        if (_onJump != null) {
-          _onJump!();
-        }
-
-        // Auto-play next asset if it's at the current timeline position
         final nextAsset = layer.assets[nextAssetIndex];
-        if (nextAsset.begin <= _newPosition) {
+
+        print('Moving to next asset: $nextAssetIndex, type: ${nextAsset.type}');
+
+        if (nextAsset.type == AssetType.video) {
+          // Initialize and play next video
           await _initializeForAsset(nextAssetIndex);
           if (_videoController != null) {
+            _newPosition = nextAsset.begin;
+            final seekPosition = Duration(milliseconds: nextAsset.cutFrom);
+            await _videoController!.seekTo(seekPosition);
             await _videoController!.play();
             _videoController!.addListener(_videoListener);
           }
+        } else if (nextAsset.type == AssetType.image) {
+          // Switch to image playback
+          _startImagePlayback(nextAsset.begin, nextAsset);
+        }
+
+        // Notify about position jump but don't end playback
+        if (_onJump != null) {
+          _onJump!();
         }
       } else {
-        // End of all assets
+        // End of all assets - now we can call onEnd
         currentAssetIndex = -1;
         if (_onJump != null) {
           _onJump!();
