@@ -167,7 +167,7 @@ class LayerPlayer {
           final nextAsset = layer.assets[nextAssetIndex];
 
           print(
-            'Image finished, moving to next asset: $nextAssetIndex, type: ${nextAsset.type}',
+            'Image finished,  moving to next asset: $nextAssetIndex, type: ${nextAsset.type}',
           );
 
           if (nextAsset.type == AssetType.image) {

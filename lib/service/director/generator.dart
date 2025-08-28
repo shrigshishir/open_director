@@ -37,7 +37,7 @@ class Generator {
     return 5000;
 
     // if (duration is String) {
-    //   return double.tryParse(duration)?.round() ?? 4;
+    return double.tryParse(duration)?.round() ?? 4;
     // } else if (duration is num) {
     //   return duration.round();
     // }
@@ -132,7 +132,7 @@ class Generator {
 
     final String galleryDirPath = '/storage/emulated/0/Movies/OpenDirector';
     await Permission.storage.request();
-    await new Directory(galleryDirPath).create();
+    await Directory(galleryDirPath).create();
 
     String arguments = _commandLogLevel('error');
 
@@ -330,9 +330,7 @@ class Generator {
     String arguments = "";
     for (var i = 0; i < layer.assets.length; i++) {
       arguments +=
-          '[${startIndex + i}:a]' +
-          _commandTrimFilter(layer.assets[i], true) +
-          'acopy[a${startIndex + i}];';
+          '[${startIndex + i}:a]${_commandTrimFilter(layer.assets[i], true)}acopy[a${startIndex + i}];';
     }
     return arguments;
   }

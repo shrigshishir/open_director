@@ -665,25 +665,18 @@ class _Asset extends StatelessWidget {
     Asset asset = directorService.layers[layerIndex].assets[assetIndex];
     Color backgroundColor = Colors.transparent;
     Color borderColor = Colors.transparent;
-    Color textColor = Colors.transparent;
-    Color backgroundTextColor = Colors.transparent;
     if (asset.deleted) {
       backgroundColor = Colors.red.shade200;
       borderColor = Colors.red;
-      textColor = Colors.red.shade900;
     } else if (layerIndex == 0) {
       backgroundColor = Colors.blue.shade200;
       borderColor = Colors.blue;
-      textColor = Colors.white;
-      backgroundTextColor = Colors.black.withOpacity(0.5);
     } else if (layerIndex == 1 && asset.title != '') {
       backgroundColor = Colors.blue.shade200;
       borderColor = Colors.blue;
-      textColor = Colors.blue.shade900;
     } else if (layerIndex == 2) {
       backgroundColor = Colors.orange.shade200;
       borderColor = Colors.orange;
-      textColor = Colors.orange.shade900;
     }
     return GestureDetector(
       child: Container(
@@ -716,22 +709,8 @@ class _Asset extends StatelessWidget {
                 )
               : null,
         ),
-        child: Text(
-          asset.title,
-          style: TextStyle(
-            color: textColor,
-            fontSize: 12,
-            backgroundColor: backgroundTextColor,
-            shadows: <Shadow>[
-              Shadow(
-                color: Colors.black,
-                offset: (layerIndex == 0)
-                    ? const Offset(1, 1)
-                    : const Offset(0, 0),
-              ),
-            ],
-          ),
-        ),
+        // Removed text overlay to clean up thumbnail display
+        child: SizedBox.shrink(),
       ),
       onTap: () => directorService.select(layerIndex, assetIndex),
       onLongPressStart: (LongPressStartDetails details) {
