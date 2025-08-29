@@ -409,7 +409,7 @@ class _ButtonGenerate extends StatelessWidget {
       mini: MediaQuery.of(context).size.width < 900,
       onPressed: () {},
       child: PopupMenuButton<dynamic>(
-        icon: Icon(Icons.theaters, color: Colors.white),
+        icon: Icon(Icons.save, color: Colors.white),
         onSelected: (dynamic val) {
           if (directorService.project == null) {
             print(
@@ -417,6 +417,7 @@ class _ButtonGenerate extends StatelessWidget {
             );
             return;
           }
+          // Show saved videos list
           if (val == 99) {
             Navigator.push(
               context,

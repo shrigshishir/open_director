@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_video_editor_app/dao/project_dao.dart';
+import 'package:flutter_video_editor_app/model/generated_video.dart';
 import 'package:flutter_video_editor_app/model/model.dart';
 import 'package:flutter_video_editor_app/model/project.dart';
 import 'package:flutter_video_editor_app/service/director/layer_player.dart';
@@ -439,17 +440,6 @@ class DirectorService {
   // Method no longer needed since we now use FilePicker.platform.pickFiles
   // which returns FilePickerResult with paths, not Map<String, String>
   // Keeping as placeholder in case custom sorting is needed later
-
-  _generateKenBurnEffects(Asset asset) {
-    asset.kenBurnZSign = math.Random().nextInt(2) - 1;
-    asset.kenBurnXTarget = (math.Random().nextInt(2) / 2).toDouble();
-    asset.kenBurnYTarget = (math.Random().nextInt(2) / 2).toDouble();
-    if (asset.kenBurnZSign == 0 &&
-        asset.kenBurnXTarget == 0.5 &&
-        asset.kenBurnYTarget == 0.5) {
-      asset.kenBurnZSign = 1;
-    }
-  }
 
   _generateAllVideoThumbnails(List<Asset> assets) async {
     await _generateVideoThumbnails(assets, VideoResolution.mini);
@@ -1132,10 +1122,30 @@ class DirectorService {
   }
 
   generateVideo(List<Layer> layers, VideoResolution videoResolution) async {
-    if (isOperating) return;
+    // if (isOperating) return;
     isGenerating = true;
     try {
-      await generator.generateVideoAll(layers, videoResolution);
+      final outputPath = await generator.generateVideoAll(
+        layers,
+        videoResolution,
+      );
+
+      // If video generation was successful and we have a valid path, save to database
+      if (outputPath != null &&
+          File(outputPath).existsSync() &&
+          project != null) {
+        final generatedVideo = GeneratedVideo(
+          projectId: project!.id!,
+          path: outputPath,
+          date: DateTime.now(),
+          resolution: generator.videoResolutionString(videoResolution),
+          thumbnail:
+              getFirstThumbnailMedPath(), // Use existing thumbnail from project
+        );
+
+        await projectDao.insertGeneratedVideo(generatedVideo);
+        logger.i('Generated video saved to database: $outputPath');
+      }
     } catch (e) {
       logger.e('Error generating video: $e');
     } finally {

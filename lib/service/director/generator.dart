@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:async';
@@ -35,13 +33,6 @@ class Generator {
       return (double.parse(duration) * 1000).round();
     }
     return 5000;
-
-    // if (duration is String) {
-    return double.tryParse(duration)?.round() ?? 4;
-    // } else if (duration is num) {
-    //   return duration.round();
-    // }
-    // return 4;
   }
 
   Future<String> generateVideoThumbnail(
@@ -81,9 +72,46 @@ class Generator {
     // To free memory
     imageCache.clear();
 
-    final String galleryDirPath = '/storage/emulated/0/Movies/OpenDirector';
-    await Permission.storage.request();
-    await Directory(galleryDirPath).create();
+    // Use app documents directory instead of hardcoded Android path
+    final Directory appDocDir = await getApplicationDocumentsDirectory();
+    final String galleryDirPath = p.join(appDocDir.path, 'generated_videos');
+
+    // Request permissions if needed (mainly for Android)
+    if (Platform.isAndroid) {
+      await Permission.storage.request();
+    }
+
+    // Create directory if it doesn't exist
+    await Directory(galleryDirPath).create(recursive: true);
+
+    // Validate that the output directory exists and is writable
+    if (!await Directory(galleryDirPath).exists()) {
+      logger.e('Failed to create output directory: $galleryDirPath');
+      return null;
+    }
+
+    // Validate input files exist
+    for (var layer in layers) {
+      for (var asset in layer.assets) {
+        if (asset.srcPath.isNotEmpty && !await File(asset.srcPath).exists()) {
+          logger.e('Input file does not exist: ${asset.srcPath}');
+          return null;
+        }
+      }
+    }
+
+    // Check if we have any video or image assets to process
+    bool hasVideoAssets = layers[0].assets.isNotEmpty;
+    bool hasAudioAssets = layers[2].assets.isNotEmpty;
+
+    if (!hasVideoAssets && !hasAudioAssets) {
+      logger.e('No video or audio assets found for processing');
+      return null;
+    }
+
+    logger.i(
+      'Video generation started: ${layers[0].assets.length} video assets, ${layers[2].assets.length} audio assets',
+    );
 
     String arguments = _commandLogLevel('error');
     arguments += _commandInputs(layers[0]);
@@ -109,11 +137,22 @@ class Generator {
       true,
     );
 
+    // Log the full FFmpeg command for debugging
+    logger.i('FFmpeg command: ffmpeg $arguments');
+    logger.i('Output path: $outputPath');
+
     final out = await executeCommand(
       arguments,
       finished: true,
       outputPath: outputPath,
     );
+
+    if (out == null) {
+      logger.e('Video generation failed');
+    } else {
+      logger.i('Video generation successful: $out');
+    }
+
     return out;
   }
 
@@ -130,9 +169,17 @@ class Generator {
     rc = await concatVideos(layers, videoResolution);
     if (rc != 0) return;
 
-    final String galleryDirPath = '/storage/emulated/0/Movies/OpenDirector';
-    await Permission.storage.request();
-    await Directory(galleryDirPath).create();
+    // Use app documents directory instead of hardcoded Android path
+    final Directory appDocDir = await getApplicationDocumentsDirectory();
+    final String galleryDirPath = p.join(appDocDir.path, 'generated_videos');
+
+    // Request permissions if needed (mainly for Android)
+    if (Platform.isAndroid) {
+      await Permission.storage.request();
+    }
+
+    // Create directory if it doesn't exist
+    await Directory(galleryDirPath).create(recursive: true);
 
     String arguments = _commandLogLevel('error');
 
@@ -193,15 +240,21 @@ class Generator {
     String arguments = _commandLogLevel('error');
     arguments += _commandInput(asset.srcPath);
     arguments += ' -filter_complex "';
+
+    // First scale to fit within target dimensions
+    arguments += _commandScaleToFitFilter(videoResolution);
+
+    // Then pad to exact target dimensions
+    arguments += _commandPadForAspectRatioFilter(videoResolution);
+
+    // Apply effects after scaling and padding
     if (asset.type == AssetType.image) {
-      arguments += _commandPadForAspectRatioFilter(videoResolution);
       arguments += _commandKenBurnsEffectFilter(videoResolution, asset);
     } else if (asset.type == AssetType.video) {
-      arguments += _commandPadForAspectRatioFilter(videoResolution);
       arguments += _commandTrimFilter(asset, false);
     }
-    arguments += _commandScaleFilter(videoResolution);
-    arguments = arguments.substring(0, arguments.length - 1);
+
+    arguments += 'setsar=1';
     arguments += '[v]"';
     arguments += _commandCodecsAndFormat(CodecsAndFormat.H264AacMp4);
 
@@ -256,25 +309,52 @@ class Generator {
     final completer = Completer<String?>();
     DateTime initTime = DateTime.now();
 
-    // ffmpeg_kit_flutter_new does not support direct statistics callback like flutter_ffmpeg
-    // so we only execute and check result
-    final session = await FFmpegKit.execute(arguments);
-    final returnCode = await session.getReturnCode();
-    if (ReturnCode.isSuccess(returnCode)) {
-      ffmepegStat.finished = finished;
-      ffmepegStat.outputPath = outputPath;
-      _ffmepegStat.add(ffmepegStat);
-      Duration diffTime = DateTime.now().difference(initTime);
-      logger.i('Generator.executeCommand() $diffTime)');
-      completer.complete(outputPath);
-    } else {
+    try {
+      final session = await FFmpegKit.execute(arguments);
+      final returnCode = await session.getReturnCode();
+
+      if (ReturnCode.isSuccess(returnCode)) {
+        // Verify the output file actually exists and has content
+        if (outputPath != null && await File(outputPath).exists()) {
+          int fileSize = await File(outputPath).length();
+          if (fileSize > 0) {
+            ffmepegStat.finished = finished;
+            ffmepegStat.outputPath = outputPath;
+            _ffmepegStat.add(ffmepegStat);
+            Duration diffTime = DateTime.now().difference(initTime);
+            logger.i('Video generation SUCCESS - Duration: $diffTime');
+            completer.complete(outputPath);
+          } else {
+            logger.e('Output file is empty');
+            final output = await session.getAllLogsAsString();
+            logger.e('FFmpeg output: $output');
+            ffmepegStat.error = true;
+            _ffmepegStat.add(ffmepegStat);
+            completer.complete(null);
+          }
+        } else {
+          logger.e('Output file not created: $outputPath');
+          final output = await session.getAllLogsAsString();
+          logger.e('FFmpeg output: $output');
+          ffmepegStat.error = true;
+          _ffmepegStat.add(ffmepegStat);
+          completer.complete(null);
+        }
+      } else {
+        ffmepegStat.error = true;
+        _ffmepegStat.add(ffmepegStat);
+        final output = await session.getAllLogsAsString();
+        logger.e('FFmpeg FAILED - Return code: $returnCode');
+        logger.e('FFmpeg output: $output');
+        completer.complete(null);
+      }
+    } catch (e) {
+      logger.e('Exception during FFmpeg execution: $e');
       ffmepegStat.error = true;
       _ffmepegStat.add(ffmepegStat);
-      final output = await session.getAllLogsAsString();
-      logger.e('Generator.executeCommand() $output');
-      // Optionally: Crashlytics.instance.recordError(...)
       completer.complete(null);
     }
+
     ffmepegStat.time = 0;
     return completer.future;
   }
@@ -311,7 +391,14 @@ class Generator {
     String arguments = "";
     for (var i = 0; i < layer.assets.length; i++) {
       arguments += '[${startIndex + i}:v]';
+
+      // First scale down to fit within target dimensions
+      arguments += _commandScaleToFitFilter(videoResolution);
+
+      // Then pad to exact target dimensions
       arguments += _commandPadForAspectRatioFilter(videoResolution);
+
+      // Apply effects after scaling and padding
       if (layer.assets[i].type == AssetType.image) {
         arguments += _commandKenBurnsEffectFilter(
           videoResolution,
@@ -320,8 +407,8 @@ class Generator {
       } else if (layer.assets[i].type == AssetType.video) {
         arguments += _commandTrimFilter(layer.assets[i], false);
       }
-      arguments += _commandScaleFilter(videoResolution);
-      arguments += 'copy[v${startIndex + i}];';
+
+      arguments += 'setsar=1,copy[v${startIndex + i}];';
     }
     return arguments;
   }
@@ -342,14 +429,17 @@ class Generator {
 
   String _commandPadForAspectRatioFilter(VideoResolution videoResolution) {
     VideoResolutionSize size = _videoResolutionSize(videoResolution);
-    return "pad=w='max(ceil(ceil(ih/2)*2/${size.height / size.width}/2)*2,ceil(iw/2)*2)':" +
-        "h='max(ceil(ceil(iw/2)*2*${size.height / size.width}/2)*2,ceil(ih/2)*2)':" +
-        "x=(ow-iw)/2:y=(oh-ih)/2,";
+
+    // Simple padding approach that ensures even dimensions
+    // This creates a canvas of the target size and centers the input video
+    return "pad=${size.width}:${size.height}:(ow-iw)/2:(oh-ih)/2,";
   }
 
-  String _commandScaleFilter(VideoResolution videoResolution) {
+  String _commandScaleToFitFilter(VideoResolution videoResolution) {
     VideoResolutionSize size = _videoResolutionSize(videoResolution);
-    return 'scale=${size.width}:${size.height}:force_original_aspect_ratio=decrease,setsar=1,';
+    // Scale to fit within target dimensions while preserving aspect ratio
+    // This ensures the input is never larger than the target size
+    return 'scale=${size.width}:${size.height}:force_original_aspect_ratio=decrease,';
   }
 
   VideoResolutionSize _videoResolutionSize(VideoResolution videoResolution) {
