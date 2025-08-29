@@ -292,8 +292,8 @@ class _ButtonCut extends StatelessWidget {
       tooltip: "Cut video selected",
       backgroundColor: Colors.blue,
       mini: MediaQuery.of(context).size.width < 900,
-      child: Icon(Icons.content_cut, color: Colors.white),
       onPressed: directorService.cutVideo,
+      child: Icon(Icons.content_cut, color: Colors.white),
     );
   }
 }

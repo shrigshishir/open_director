@@ -924,34 +924,59 @@ class DirectorService {
     _previewOnPosition();
   }
 
+  /// Cuts the currently selected video asset at the current playhead position.
   cutVideo() async {
     if (isOperating) return;
+
+    /// This is a safeguard to prevent cutting when no asset is selected
     if (selected.layerIndex == -1 || selected.assetIndex == -1) return;
     print('>> DirectorService.cutVideo()');
+
+    /// Get the currently selected asset
     final Asset assetAfter =
         layers[selected.layerIndex].assets[selected.assetIndex];
+
+    /// Calculates how far into the asset the cut position is
+    /// [Position]: Current timeline playhead position (in ms)
+    /// [AssetAfter.begin]: Where the asset begins on the timeline (in ms)
     final int diff = position - assetAfter.begin;
     if (diff <= 0 || diff >= assetAfter.duration) return;
     isCutting = true;
 
+    /// Create an exact copy of the original asset
     final Asset assetBefore = Asset.clone(assetAfter);
     layers[selected.layerIndex].assets.insert(selected.assetIndex, assetBefore);
 
+    /// For the first asset
+    /// Duration becomes the time from asset start to cut position
     assetBefore.duration = diff;
+
+    /// For the second asset
+    /// [begin]: Timeline position shifts forward by diff milliseconds
+    /// [cutFrom]: Source media starting point shifts forward (skips the first part)
+    /// [duration]: Shortened by removing the first part
     assetAfter.begin = assetBefore.begin + diff;
     assetAfter.cutFrom = assetBefore.cutFrom + diff;
     assetAfter.duration = assetAfter.duration - diff;
 
+    /// Media Source Updates
+
+    /// 1. Remove the original media source at the selected asset index
     layerPlayers[selected.layerIndex]?.removeMediaSource(selected.assetIndex);
+
+    /// 2. Add the new media source for the asset before the cut
     await layerPlayers[selected.layerIndex]?.addMediaSource(
       selected.assetIndex,
       assetBefore,
     );
+
+    /// 3. Add the new media source for the asset after the cut
     await layerPlayers[selected.layerIndex]?.addMediaSource(
       selected.assetIndex + 1,
       assetAfter,
     );
 
+    /// Trigger UI refresh
     _layersChanged.add(true);
 
     if (assetAfter.type == AssetType.video) {
@@ -959,6 +984,7 @@ class DirectorService {
       _generateAllVideoThumbnails(layers[selected.layerIndex].assets);
     }
 
+    /// Clears selection
     _selected.add(Selected(-1, -1));
     _appBar.add(true);
 
