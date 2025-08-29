@@ -134,6 +134,12 @@ class LayerPlayer {
     await _videoController!.setVolume(layer.volume ?? 1.0);
     _newPosition = pos - asset.begin;
 
+    // FIXED: Ensure we don't start playing beyond the asset's duration
+    if (_newPosition >= asset.duration) {
+      print('Warning: Attempted to play beyond asset duration');
+      return;
+    }
+
     // Seek to position within the asset (considering cutFrom offset)
     final seekPosition = Duration(milliseconds: asset.cutFrom + _newPosition);
     await _videoController!.seekTo(seekPosition);
@@ -203,10 +209,17 @@ class LayerPlayer {
       await _videoController!.setVolume(layer.volume ?? 1.0);
       _newPosition = startPos;
 
+      // FIXED: Ensure we don't start playing beyond the asset's duration
+      final relativePos = startPos - asset.begin;
+      if (relativePos >= asset.duration) {
+        print(
+          'Warning: Attempted to play beyond asset duration in _playVideoAsset',
+        );
+        return;
+      }
+
       // Seek to position within the asset (considering cutFrom offset)
-      final seekPosition = Duration(
-        milliseconds: asset.cutFrom + (startPos - asset.begin),
-      );
+      final seekPosition = Duration(milliseconds: asset.cutFrom + relativePos);
       await _videoController!.seekTo(seekPosition);
       await _videoController!.play();
       _videoController!.addListener(_videoListener);
@@ -241,14 +254,17 @@ class LayerPlayer {
     final assetDuration = asset.duration;
     final relativePosition = videoPosition - asset.cutFrom;
 
-    bool isAtEnd =
-        (!_videoController!.value.isPlaying &&
-        relativePosition >= assetDuration - 100);
+    // FIXED: Active check for duration limit - pause video when it exceeds asset duration
+    bool isAtEnd = relativePosition >= assetDuration; // 50ms tolerance
 
     if (isAtEnd) {
       // Remove listener to prevent multiple triggers
       _videoController!.removeListener(_videoListener);
-      await _videoController!.pause();
+
+      // FIXED: Actively pause the video when it reaches the asset duration limit
+      if (_videoController!.value.isPlaying) {
+        await _videoController!.pause();
+      }
 
       // Check if there's a next asset to play
       int nextAssetIndex = currentAssetIndex + 1;
