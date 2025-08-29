@@ -365,71 +365,75 @@ class DirectorService {
   }
 
   add(AssetType assetType) async {
-    // if (isOperating) return;
+    // Prevent multiple concurrent calls
+    if (isOperating) {
+      print('Add operation already in progress, ignoring request');
+      return;
+    }
+
     isAdding = true;
     print('>> DirectorService.add($assetType)');
 
-    if (assetType == AssetType.video) {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.video,
-        allowMultiple: true,
-      );
-      if (result == null) {
-        isAdding = false;
-        return;
+    try {
+      if (assetType == AssetType.video) {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.video,
+          allowMultiple: true,
+        );
+        if (result == null) return;
+
+        List<File> fileList = result.paths
+            .whereType<String>()
+            .map((path) => File(path))
+            .toList();
+        for (int i = 0; i < fileList.length; i++) {
+          await _addAssetToLayer(0, AssetType.video, fileList[i].path);
+          await _generateAllVideoThumbnails(layers[0].assets);
+        }
+      } else if (assetType == AssetType.image) {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowMultiple: true,
+        );
+        if (result == null) return;
+
+        List<File> fileList = result.paths
+            .whereType<String>()
+            .map((path) => File(path))
+            .toList();
+        for (int i = 0; i < fileList.length; i++) {
+          await _addAssetToLayer(0, AssetType.image, fileList[i].path);
+          // _generateKenBurnEffects(layers[0].assets.last);
+          await _generateAllImageThumbnails(layers[0].assets);
+        }
+      } else if (assetType == AssetType.text) {
+        editingTextAsset = Asset(
+          type: AssetType.text,
+          begin: 0, // TODO:
+          duration: 5000,
+          title: '',
+          srcPath: '',
+        );
+      } else if (assetType == AssetType.audio) {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.audio,
+          allowMultiple: true,
+        );
+        if (result == null) return;
+
+        List<File> fileList = result.paths
+            .whereType<String>()
+            .map((path) => File(path))
+            .toList();
+        for (int i = 0; i < fileList.length; i++) {
+          await _addAssetToLayer(2, AssetType.audio, fileList[i].path);
+        }
       }
-      List<File> fileList = result.paths
-          .whereType<String>()
-          .map((path) => File(path))
-          .toList();
-      for (int i = 0; i < fileList.length; i++) {
-        await _addAssetToLayer(0, AssetType.video, fileList[i].path);
-        await _generateAllVideoThumbnails(layers[0].assets);
-      }
-    } else if (assetType == AssetType.image) {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        allowMultiple: true,
-      );
-      if (result == null) {
-        isAdding = false;
-        return;
-      }
-      List<File> fileList = result.paths
-          .whereType<String>()
-          .map((path) => File(path))
-          .toList();
-      for (int i = 0; i < fileList.length; i++) {
-        await _addAssetToLayer(0, AssetType.image, fileList[i].path);
-        // _generateKenBurnEffects(layers[0].assets.last);
-        await _generateAllImageThumbnails(layers[0].assets);
-      }
-    } else if (assetType == AssetType.text) {
-      editingTextAsset = Asset(
-        type: AssetType.text,
-        begin: 0, // TODO:
-        duration: 5000,
-        title: '',
-        srcPath: '',
-      );
-    } else if (assetType == AssetType.audio) {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.audio,
-        allowMultiple: true,
-      );
-      if (result == null) {
-        isAdding = false;
-        return;
-      }
-      List<File> fileList = result.paths
-          .whereType<String>()
-          .map((path) => File(path))
-          .toList();
-      for (int i = 0; i < fileList.length; i++) {
-        await _addAssetToLayer(2, AssetType.audio, fileList[i].path);
-      }
+    } catch (e) {
+      print('Error in add(): $e');
+    } finally {
+      isAdding = false;
     }
-    isAdding = false;
   }
 
   // Method no longer needed since we now use FilePicker.platform.pickFiles
