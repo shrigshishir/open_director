@@ -1,11 +1,9 @@
-// import removed: 'package:flutter/foundation.dart';
-
 class Layer {
   final String type; // TODO: enums
-  final List<Asset> assets;
-  final double volume;
+  List<Asset> assets;
+  double? volume;
 
-  Layer({required this.type, List<Asset>? assets, required this.volume})
+  Layer({required this.type, List<Asset>? assets, this.volume})
     : assets = assets ?? <Asset>[];
 
   Layer.clone(Layer layer)
@@ -13,15 +11,14 @@ class Layer {
       assets = layer.assets.map((asset) => Asset.clone(asset)).toList(),
       volume = layer.volume;
 
-  factory Layer.fromJson(Map<String, dynamic> map) => Layer(
-    type: map['type'] as String,
-    assets:
-        (map['assets'] as List<dynamic>?)
-            ?.map((json) => Asset.fromJson(json))
-            .toList() ??
-        [],
-    volume: (map['volume'] as num?)?.toDouble() ?? 1.0,
-  );
+  Layer.fromJson(Map<String, dynamic> map)
+    : type = map['type'],
+      assets = map['assets'] != null
+          ? List<Asset>.from(
+              (map['assets'] as List).map((json) => Asset.fromJson(json)),
+            )
+          : <Asset>[],
+      volume = map['volume'];
 
   Map<String, dynamic> toJson() => {
     'type': type,
@@ -33,60 +30,61 @@ class Layer {
 enum AssetType { video, image, text, audio }
 
 class Asset {
-  final AssetType type;
-  final String srcPath;
+  AssetType type;
+  String srcPath;
   String? thumbnailPath;
   String? thumbnailMedPath;
-  String? title;
-  int? duration;
-  int? begin;
-  int? cutFrom;
-  int? kenBurnZSign;
-  double? kenBurnXTarget;
-  double? kenBurnYTarget;
-  double? x;
-  double? y;
-  String? font;
-  double? fontSize;
-  int? fontColor;
-  final double? alpha;
-  final double? borderw;
-  final int? bordercolor;
-  final int? shadowcolor;
-  final double? shadowx;
-  final double? shadowy;
-  final bool? box;
-  final double? boxborderw;
-  int? boxcolor;
-  bool? deleted;
+  String title;
+  int duration;
+  int begin;
+  int cutFrom;
+
+  int kenBurnZSign;
+  double kenBurnXTarget;
+  double kenBurnYTarget;
+  double x;
+  double y;
+  String font;
+  double fontSize;
+  int fontColor;
+  double alpha;
+  double borderw;
+  int bordercolor;
+  int shadowcolor;
+  double shadowx;
+  double shadowy;
+  bool box;
+  double boxborderw;
+  int boxcolor;
+  bool deleted;
 
   Asset({
     required this.type,
     required this.srcPath,
     this.thumbnailPath,
     this.thumbnailMedPath,
-    this.title,
-    this.duration,
-    this.begin,
-    this.cutFrom,
-    this.kenBurnZSign,
-    this.kenBurnXTarget,
-    this.kenBurnYTarget,
-    this.x,
-    this.y,
-    this.font,
-    this.fontSize,
-    this.fontColor,
-    this.alpha,
-    this.borderw,
-    this.bordercolor,
-    this.shadowcolor,
-    this.shadowx,
-    this.shadowy,
-    this.box,
-    this.boxborderw,
-    this.boxcolor,
-    this.deleted,
+    required this.title,
+    required this.duration,
+    required this.begin,
+    this.cutFrom = 0,
+    this.kenBurnZSign = 0,
+    this.kenBurnXTarget = 0.5,
+    this.kenBurnYTarget = 0.5,
+    this.x = 0.1,
+    this.y = 0.1,
+    this.font = 'Lato/Lato-Regular.ttf',
+    this.fontSize = 0.1,
+    this.fontColor = 0xFFFFFFFF,
+    this.alpha = 1,
+    this.borderw = 0,
+    this.bordercolor = 0xFFFFFFFF,
+    this.shadowcolor = 0xFFFFFFFF,
+    this.shadowx = 0,
+    this.shadowy = 0,
+    this.box = false,
+    this.boxborderw = 0,
+    this.boxcolor = 0x88000000,
+    this.deleted = false,
   });
 
   Asset.clone(Asset asset)
@@ -117,34 +115,33 @@ class Asset {
       boxcolor = asset.boxcolor,
       deleted = asset.deleted;
 
-  factory Asset.fromJson(Map<String, dynamic> map) => Asset(
-    type: Asset.getAssetTypeFromString(map['type'] as String),
-    srcPath: map['srcPath'] as String,
-    thumbnailPath: map['thumbnailPath'] as String?,
-    thumbnailMedPath: map['thumbnailMedPath'] as String?,
-    title: map['title'] as String?,
-    duration: map['duration'] as int?,
-    begin: map['begin'] as int?,
-    cutFrom: map['cutFrom'] as int?,
-    kenBurnZSign: map['kenBurnZSign'] as int?,
-    kenBurnXTarget: (map['kenBurnXTarget'] as num?)?.toDouble(),
-    kenBurnYTarget: (map['kenBurnYTarget'] as num?)?.toDouble(),
-    x: (map['x'] as num?)?.toDouble(),
-    y: (map['y'] as num?)?.toDouble(),
-    font: map['font'] as String?,
-    fontSize: (map['fontSize'] as num?)?.toDouble(),
-    fontColor: map['fontColor'] as int?,
-    alpha: (map['alpha'] as num?)?.toDouble(),
-    borderw: (map['borderw'] as num?)?.toDouble(),
-    bordercolor: map['bordercolor'] as int?,
-    shadowcolor: map['shadowcolor'] as int?,
-    shadowx: (map['shadowx'] as num?)?.toDouble(),
-    shadowy: (map['shadowy'] as num?)?.toDouble(),
-    box: map['box'] as bool?,
-    boxborderw: (map['boxborderw'] as num?)?.toDouble(),
-    boxcolor: map['boxcolor'] as int?,
-    deleted: map['deleted'] as bool?,
-  );
+  Asset.fromJson(Map<String, dynamic> map)
+    : type = getAssetTypeFromString(map['type'])!,
+      srcPath = map['srcPath'],
+      thumbnailPath = map['thumbnailPath'],
+      thumbnailMedPath = map['thumbnailMedPath'],
+      title = map['title'],
+      duration = map['duration'],
+      begin = map['begin'],
+      cutFrom = map['cutFrom'] ?? 0,
+      kenBurnZSign = map['kenBurnZSign'] ?? 0,
+      kenBurnXTarget = (map['kenBurnXTarget'] ?? 0.5).toDouble(),
+      kenBurnYTarget = (map['kenBurnYTarget'] ?? 0.5).toDouble(),
+      x = (map['x'] ?? 0.1).toDouble(),
+      y = (map['y'] ?? 0.1).toDouble(),
+      font = map['font'] ?? 'Lato/Lato-Regular.ttf',
+      fontSize = (map['fontSize'] ?? 0.1).toDouble(),
+      fontColor = map['fontColor'] ?? 0xFFFFFFFF,
+      alpha = (map['alpha'] ?? 1).toDouble(),
+      borderw = (map['borderw'] ?? 0).toDouble(),
+      bordercolor = map['bordercolor'] ?? 0xFFFFFFFF,
+      shadowcolor = map['shadowcolor'] ?? 0xFFFFFFFF,
+      shadowx = (map['shadowx'] ?? 0).toDouble(),
+      shadowy = (map['shadowy'] ?? 0).toDouble(),
+      box = map['box'] ?? false,
+      boxborderw = (map['boxborderw'] ?? 0).toDouble(),
+      boxcolor = map['boxcolor'] ?? 0x88000000,
+      deleted = map['deleted'] ?? false;
 
   Map<String, dynamic> toJson() => {
     'type': type.toString(),
@@ -175,27 +172,25 @@ class Asset {
     'deleted': deleted,
   };
 
-  static AssetType getAssetTypeFromString(String assetTypeAsString) {
+  static AssetType? getAssetTypeFromString(String? assetTypeAsString) {
+    if (assetTypeAsString == null) return null;
     for (AssetType element in AssetType.values) {
-      if (element.toString() == assetTypeAsString ||
-          element.name == assetTypeAsString) {
+      if (element.toString() == assetTypeAsString) {
         return element;
       }
     }
-    // Default fallback
-    return AssetType.video;
+    return null;
   }
 }
-// ...existing code...
-// (All legacy Asset code removed; only the new null-safe Asset class and its methods remain above)
 
 class Selected {
-  int layerIndex;
-  int assetIndex;
-  double initScrollOffset;
-  double incrScrollOffset;
+  final int layerIndex;
+  final int assetIndex;
   double dragX;
   int closestAsset;
+  double initScrollOffset;
+  double incrScrollOffset;
+
   Selected(
     this.layerIndex,
     this.assetIndex, {

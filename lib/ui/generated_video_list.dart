@@ -18,7 +18,7 @@ class GeneratedVideoList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('${project.title}')),
+      appBar: AppBar(title: Text(project.title)),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -64,13 +64,12 @@ class _GeneratedVideoCard extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: new Text('File does not exist'),
-          content: new Text(
-            'This video file has been deleted from your device',
-          ),
+          title: Text('File does not exist'),
+          content: Text('This video file has been deleted from your device'),
           actions: <Widget>[
-            ElevatedButton(
-              child: new Text('OK'),
+            TextButton(
+              child: Text('OK'),
+
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -84,9 +83,7 @@ class _GeneratedVideoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<GeneratedVideo> list = generatedVideoService.generatedVideoList;
-    bool thumbnailExists =
-        list[index].thumbnail != null &&
-        File(list[index].thumbnail!).existsSync();
+    bool thumbnailExists = File(list[index].thumbnail!).existsSync();
     return GestureDetector(
       child: Card(
         child: ListTile(

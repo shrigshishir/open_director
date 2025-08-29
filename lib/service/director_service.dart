@@ -4,18 +4,17 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_video_editor_app/dao/project_dao.dart';
-// import 'package:flutter_video_editor_app/model/generated_video.dart';
 import 'package:flutter_video_editor_app/model/model.dart';
 import 'package:flutter_video_editor_app/model/project.dart';
-import 'package:flutter_video_editor_app/service/director/generator.dart';
 import 'package:flutter_video_editor_app/service/director/layer_player.dart';
 import 'package:flutter_video_editor_app/service/project_service.dart';
-import 'package:flutter_video_editor_app/service_locator.dart';
 import 'package:logger/logger.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:file_picker/file_picker.dart';
-// import 'package:path_provider/path_provider.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:flutter_video_editor_app/service_locator.dart';
+import 'package:flutter_video_editor_app/service/director/generator.dart';
 
 class DirectorService {
   Project? project;
@@ -24,18 +23,8 @@ class DirectorService {
   final generator = locator.get<Generator>();
   final projectDao = locator.get<ProjectDao>();
 
-  List<Layer> layers = [];
-
-  // Ensure default layers exist
-  void _ensureDefaultLayers() {
-    if (layers.isEmpty) {
-      layers = [
-        Layer(type: "raster", volume: 0.1),
-        Layer(type: "vector", volume: 0.0),
-        Layer(type: "audio", volume: 1.0),
-      ];
-    }
-  }
+  late List<Layer> layers;
+  bool _isInitialized = false;
 
   // Flags for concurrency
   bool isEntering = false;
@@ -67,13 +56,13 @@ class DirectorService {
   double dxSizerDrag = 0;
   bool isSizerDraggingEnd = false;
 
-  BehaviorSubject<bool> _filesNotExist = BehaviorSubject.seeded(false);
+  final BehaviorSubject<bool> _filesNotExist = BehaviorSubject.seeded(false);
   Stream<bool> get filesNotExist$ => _filesNotExist.stream;
   bool get filesNotExist => _filesNotExist.value;
 
-  List<LayerPlayer?> layerPlayers = [];
+  late List<LayerPlayer?> layerPlayers;
 
-  ScrollController scrollController = ScrollController();
+  final ScrollController scrollController = ScrollController();
 
   final BehaviorSubject<bool> _layersChanged = BehaviorSubject.seeded(false);
   Stream<bool> get layersChanged$ => _layersChanged.stream;
@@ -85,11 +74,13 @@ class DirectorService {
   Stream<Selected> get selected$ => _selected.stream;
   Selected get selected => _selected.value;
   Asset? get assetSelected {
-    if (selected.layerIndex == -1 || selected.assetIndex == -1) return null;
+    if (!_isInitialized ||
+        selected.layerIndex == -1 ||
+        selected.assetIndex == -1)
+      return null;
     return layers[selected.layerIndex].assets[selected.assetIndex];
   }
 
-  // ignore: constant_identifier_names
   static const double DEFAULT_PIXELS_PER_SECONDS = 100.0 / 5.0;
   final BehaviorSubject<double> _pixelsPerSecond = BehaviorSubject.seeded(
     DEFAULT_PIXELS_PER_SECONDS,
@@ -130,17 +121,18 @@ class DirectorService {
   String get positionSeconds {
     int minutes = (position / 1000 / 60).floor();
     double seconds = (((position / 1000 - minutes * 60) * 10).floor() / 10);
-    return (seconds < 10) ? '0$seconds' : seconds.toString();
+    return (seconds < 10)
+        ? '0${seconds.toStringAsFixed(1)}'
+        : seconds.toStringAsFixed(1);
   }
 
   int get duration {
+    if (!_isInitialized) return 0;
     int maxDuration = 0;
     for (int i = 0; i < layers.length; i++) {
       for (int j = layers[i].assets.length - 1; j >= 0; j--) {
         if (!(i == 1 && layers[i].assets[j].title == '')) {
-          int dur =
-              (layers[i].assets[j].begin ?? 0) +
-              (layers[i].assets[j].duration ?? 0);
+          int dur = layers[i].assets[j].begin + layers[i].assets[j].duration;
           maxDuration = math.max(maxDuration, dur);
           break;
         }
@@ -154,8 +146,6 @@ class DirectorService {
     _layersChanged.listen((bool onData) => _saveProject());
   }
 
-  // get generator => generator;
-
   dispose() {
     _layersChanged.close();
     _selected.close();
@@ -167,45 +157,48 @@ class DirectorService {
     _filesNotExist.close();
   }
 
-  setProject(Project project) async {
+  setProject(Project _project) async {
     isEntering = true;
 
     _position.add(0);
     _selected.add(Selected(-1, -1));
-    _editingTextAsset.add(null);
+    editingTextAsset = null;
     _editingColor.add(null);
     _pixelsPerSecond.add(DEFAULT_PIXELS_PER_SECONDS);
     _appBar.add(true);
 
-    if (project != project) {
-      project = project;
-      if (project.layersJson == null) {
+    if (project != _project) {
+      project = _project;
+      if (_project.layersJson == null) {
         layers = [
           // TODO: audio mixing between layers
           Layer(type: "raster", volume: 0.1),
-          Layer(type: "vector", volume: 0.0),
+          Layer(type: "vector"),
           Layer(type: "audio", volume: 1.0),
         ];
       } else {
         layers = List<Layer>.from(
           json
-              .decode(project.layersJson!)
+              .decode(_project.layersJson!)
               .map((layerMap) => Layer.fromJson(layerMap)),
         ).toList();
         _filesNotExist.add(checkSomeFileNotExists());
       }
+      _isInitialized = true;
       _layersChanged.add(true);
 
-      layerPlayers = [];
+      layerPlayers = List<LayerPlayer?>.filled(
+        layers.length,
+        null,
+        growable: false,
+      );
       for (int i = 0; i < layers.length; i++) {
         LayerPlayer? layerPlayer;
         if (i != 1) {
           layerPlayer = LayerPlayer(layers[i]);
           await layerPlayer.initialize();
-        } else {
-          layerPlayer = null;
         }
-        layerPlayers.add(layerPlayer);
+        layerPlayers[i] = layerPlayer;
       }
     }
     isEntering = false;
@@ -213,6 +206,7 @@ class DirectorService {
   }
 
   checkSomeFileNotExists() {
+    if (!_isInitialized) return false;
     bool _someFileNotExists = false;
     for (int i = 0; i < layers.length; i++) {
       for (int j = 0; j < layers[i].assets.length; j++) {
@@ -235,36 +229,35 @@ class DirectorService {
 
     Future.delayed(Duration(milliseconds: 500), () {
       project = null;
-      for (var layerPlayer in layerPlayers) {
+      layerPlayers.forEach((layerPlayer) {
         layerPlayer?.dispose();
         layerPlayer = null;
-      }
+      });
       isExiting = false;
     });
 
-    _deleteThumbnailsNotUsed();
+    // _deleteThumbnailsNotUsed();
     return true;
   }
 
   _saveProject() {
-    if (project != null) {
-      project!.layersJson = json.encode(layers);
-      project!.imagePath = layers[0].assets.isNotEmpty
-          ? getFirstThumbnailMedPath()
-          : null;
-      projectService.update(project!);
-    }
+    if (!_isInitialized || layers.isEmpty || project == null) return;
+    project!.layersJson = json.encode(layers);
+    project!.imagePath = layers[0].assets.isNotEmpty
+        ? getFirstThumbnailMedPath()
+        : null;
+    projectService.update(project!);
   }
 
-  String? getFirstThumbnailMedPath() {
+  String getFirstThumbnailMedPath() {
     for (int i = 0; i < layers[0].assets.length; i++) {
       Asset asset = layers[0].assets[i];
       if (asset.thumbnailMedPath != null &&
           File(asset.thumbnailMedPath!).existsSync()) {
-        return asset.thumbnailMedPath;
+        return asset.thumbnailMedPath!;
       }
     }
-    return null;
+    return '';
   }
 
   _listenerScrollController() async {
@@ -296,8 +289,6 @@ class DirectorService {
     isPreviewing = true;
     scrollController.removeListener(_listenerScrollController);
 
-    if (layers.isEmpty) return;
-
     await layerPlayers[0]?.preview(position);
     _position.add(position);
 
@@ -326,18 +317,18 @@ class DirectorService {
       if (i == mainLayer) {
         await layerPlayers[i]?.play(
           position,
-          // onMove: (int newPosition) {
-          //   _position.add(newPosition);
-          //   scrollController.animateTo(
-          //     (300 + newPosition) / 1000 * pixelsPerSecond,
-          //     duration: Duration(milliseconds: 300),
-          //     curve: Curves.linear,
-          //   );
-          // },
-          // onEnd: () {
-          //   isPlaying = false;
-          //   _appBar.add(true);
-          // },
+          onMove: (int newPosition) {
+            _position.add(newPosition);
+            scrollController.animateTo(
+              (300 + newPosition) / 1000 * pixelsPerSecond,
+              duration: Duration(milliseconds: 300),
+              curve: Curves.linear,
+            );
+          },
+          onEnd: () {
+            isPlaying = false;
+            _appBar.add(true);
+          },
         );
       } else {
         await layerPlayers[i]?.play(position);
@@ -347,7 +338,7 @@ class DirectorService {
   }
 
   stop() async {
-    if ((isOperating && !isPlaying) || !isPlaying) return;
+    // if ((isOperating && !isPlaying) || !isPlaying) return;
     print('>> DirectorService.stop()');
     for (int i = 0; i < layers.length; i++) {
       if (i == 1) continue;
@@ -363,75 +354,91 @@ class DirectorService {
     for (int i = 0; i < layers.length; i++) {
       if (i != 1 &&
           layers[i].assets.isNotEmpty &&
-          (layers[i].assets.last.begin ?? 0) +
-                  (layers[i].assets.last.duration ?? 0) >
+          layers[i].assets.last.begin + layers[i].assets.last.duration >
               mainLayerDuration) {
         mainLayer = i;
         mainLayerDuration =
-            (layers[i].assets.last.begin ?? 0) +
-            (layers[i].assets.last.duration ?? 0);
+            layers[i].assets.last.begin + layers[i].assets.last.duration;
       }
     }
     return mainLayer;
   }
 
   add(AssetType assetType) async {
-    _ensureDefaultLayers();
-    // if (isOperating) return;
+    // Prevent multiple concurrent calls
+    if (isOperating) {
+      print('Add operation already in progress, ignoring request');
+      return;
+    }
+
     isAdding = true;
     print('>> DirectorService.add($assetType)');
 
-    if (assetType == AssetType.video ||
-        assetType == AssetType.image ||
-        assetType == AssetType.audio) {
-      final result = await FilePicker.platform.pickFiles(
-        allowMultiple: true,
-        type: assetType == AssetType.video
-            ? FileType.video
-            : assetType == AssetType.image
-            ? FileType.image
-            : FileType.audio,
-      );
-      if (result == null || result.files.isEmpty) {
-        isAdding = false;
-        return;
-      }
-      final fileList = result.files.map((f) => File(f.path!)).toList();
+    try {
       if (assetType == AssetType.video) {
-        for (final file in fileList) {
-          await _addAssetToLayer(0, AssetType.video, file.path);
-          // TODO: Generate video thumbnails if needed
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.video,
+          allowMultiple: true,
+        );
+        if (result == null) return;
+
+        List<File> fileList = result.paths
+            .whereType<String>()
+            .map((path) => File(path))
+            .toList();
+        for (int i = 0; i < fileList.length; i++) {
+          await _addAssetToLayer(0, AssetType.video, fileList[i].path);
+          await _generateAllVideoThumbnails(layers[0].assets);
         }
       } else if (assetType == AssetType.image) {
-        for (final file in fileList) {
-          await _addAssetToLayer(0, AssetType.image, file.path);
-          _generateKenBurnEffects(layers[0].assets.last);
-          // TODO: Generate image thumbnails if needed
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.image,
+          allowMultiple: true,
+        );
+        if (result == null) return;
+
+        List<File> fileList = result.paths
+            .whereType<String>()
+            .map((path) => File(path))
+            .toList();
+        for (int i = 0; i < fileList.length; i++) {
+          await _addAssetToLayer(0, AssetType.image, fileList[i].path);
+          // _generateKenBurnEffects(layers[0].assets.last);
+          await _generateAllImageThumbnails(layers[0].assets);
         }
+      } else if (assetType == AssetType.text) {
+        editingTextAsset = Asset(
+          type: AssetType.text,
+          begin: 0, // TODO:
+          duration: 5000,
+          title: '',
+          srcPath: '',
+        );
       } else if (assetType == AssetType.audio) {
-        for (final file in fileList) {
-          await _addAssetToLayer(2, AssetType.audio, file.path);
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.audio,
+          allowMultiple: true,
+        );
+        if (result == null) return;
+
+        List<File> fileList = result.paths
+            .whereType<String>()
+            .map((path) => File(path))
+            .toList();
+        for (int i = 0; i < fileList.length; i++) {
+          await _addAssetToLayer(2, AssetType.audio, fileList[i].path);
         }
       }
-    } else if (assetType == AssetType.text) {
-      editingTextAsset = Asset(
-        type: AssetType.text,
-        begin: 0, // TODO:
-        duration: 5000,
-        title: '',
-        srcPath: '',
-      );
+    } catch (e) {
+      print('Error in add(): $e');
+    } finally {
+      isAdding = false;
     }
-    isAdding = false;
   }
 
-  _sortFilesByDate(Map<String, String> filePaths) {
-    var fileList = filePaths.entries.map((entry) => File(entry.value)).toList();
-    fileList.sort((file1, file2) {
-      return file1.lastModifiedSync().compareTo(file2.lastModifiedSync());
-    });
-    return fileList;
-  }
+  // Method no longer needed since we now use FilePicker.platform.pickFiles
+  // which returns FilePickerResult with paths, not Map<String, String>
+  // Keeping as placeholder in case custom sorting is needed later
 
   _generateKenBurnEffects(Asset asset) {
     asset.kenBurnZSign = math.Random().nextInt(2) - 1;
@@ -444,32 +451,109 @@ class DirectorService {
     }
   }
 
-  // _generateAllVideoThumbnails(List<Asset> assets) async {}
-  // _generateAllImageThumbnails(List<Asset> assets) async {}
+  _generateAllVideoThumbnails(List<Asset> assets) async {
+    await _generateVideoThumbnails(assets, VideoResolution.mini);
+    await _generateVideoThumbnails(assets, VideoResolution.sd);
+  }
+
+  _generateVideoThumbnails(
+    List<Asset> assets,
+    VideoResolution videoResolution,
+  ) async {
+    Directory appDocDir = await getApplicationDocumentsDirectory();
+    await Directory(p.join(appDocDir.path, 'thumbnails')).create();
+    for (int i = 0; i < assets.length; i++) {
+      Asset asset = assets[i];
+      if (((videoResolution == VideoResolution.mini &&
+                  asset.thumbnailPath == null) ||
+              asset.thumbnailMedPath == null) &&
+          !asset.deleted) {
+        String thumbnailFileName =
+            p.setExtension(asset.srcPath, '').split('/').last +
+            '_pos_${asset.cutFrom}.jpg';
+        String thumbnailPath = p.join(
+          appDocDir.path,
+          'thumbnails',
+          thumbnailFileName,
+        );
+        thumbnailPath = await generator.generateVideoThumbnail(
+          asset.srcPath,
+          thumbnailPath,
+          asset.cutFrom,
+          videoResolution,
+        );
+
+        if (videoResolution == VideoResolution.mini) {
+          asset.thumbnailPath = thumbnailPath;
+        } else {
+          asset.thumbnailMedPath = thumbnailPath;
+        }
+        _layersChanged.add(true);
+      }
+    }
+  }
+
+  _generateAllImageThumbnails(List<Asset> assets) async {
+    await _generateImageThumbnails(assets, VideoResolution.mini);
+    await _generateImageThumbnails(assets, VideoResolution.sd);
+  }
+
+  _generateImageThumbnails(
+    List<Asset> assets,
+    VideoResolution videoResolution,
+  ) async {
+    Directory appDocDir = await getApplicationDocumentsDirectory();
+    await Directory(p.join(appDocDir.path, 'thumbnails')).create();
+    for (int i = 0; i < assets.length; i++) {
+      Asset asset = assets[i];
+      if (((videoResolution == VideoResolution.mini &&
+                  asset.thumbnailPath == null) ||
+              asset.thumbnailMedPath == null) &&
+          !asset.deleted) {
+        String thumbnailFileName =
+            p.setExtension(asset.srcPath, '').split('/').last + '_min.jpg';
+        String thumbnailPath = p.join(
+          appDocDir.path,
+          'thumbnails',
+          thumbnailFileName,
+        );
+        thumbnailPath = await generator.generateImageThumbnail(
+          asset.srcPath,
+          thumbnailPath,
+          videoResolution,
+        );
+        if (videoResolution == VideoResolution.mini) {
+          asset.thumbnailPath = thumbnailPath;
+        } else {
+          asset.thumbnailMedPath = thumbnailPath;
+        }
+        _layersChanged.add(true);
+      }
+    }
+  }
 
   editTextAsset() {
     if (assetSelected == null) return;
-    if (assetSelected?.type != AssetType.text) return;
+    if (assetSelected!.type != AssetType.text) return;
     editingTextAsset = Asset.clone(assetSelected!);
     scrollController.animateTo(
-      assetSelected!.begin! / 1000 * pixelsPerSecond,
+      assetSelected!.begin / 1000 * pixelsPerSecond,
       duration: Duration(milliseconds: 300),
       curve: Curves.linear,
     );
   }
 
   saveTextAsset() {
-    final asset = editingTextAsset;
-    if (asset == null) return;
-    if (asset.title == '') {
-      asset.title = 'No title';
+    if (editingTextAsset == null) return;
+    if (editingTextAsset!.title == '') {
+      editingTextAsset!.title = 'No title';
     }
     if (assetSelected == null) {
-      asset.begin = position;
-      layers[1].assets.add(asset);
+      editingTextAsset!.begin = position;
+      layers[1].assets.add(editingTextAsset!);
       reorganizeTextAssets(1);
     } else {
-      layers[1].assets[selected.assetIndex] = asset;
+      layers[1].assets[selected.assetIndex] = editingTextAsset!;
     }
     _layersChanged.add(true);
     editingTextAsset = null;
@@ -479,9 +563,7 @@ class DirectorService {
     if (layers[layerIndex].assets.isEmpty) return;
     // After adding an asset in a position (begin = position),
     // it´s neccesary to sort
-    layers[layerIndex].assets.sort(
-      (a, b) => (a.begin ?? 0).compareTo(b.begin ?? 0),
-    );
+    layers[layerIndex].assets.sort((a, b) => a.begin - b.begin);
 
     // Configuring other assets and spaces after that
     for (int i = 1; i < layers[layerIndex].assets.length; i++) {
@@ -489,55 +571,46 @@ class DirectorService {
       Asset prevAsset = layers[layerIndex].assets[i - 1];
 
       if (prevAsset.title == '' && asset.title == '') {
-        asset.begin = prevAsset.begin ?? 0;
-        asset.duration = (asset.duration ?? 0) + (prevAsset.duration ?? 0);
+        asset.begin = prevAsset.begin;
+        asset.duration += prevAsset.duration;
         prevAsset.duration = 0; // To delete at the end
       } else if (prevAsset.title == '' && asset.title != '') {
-        prevAsset.duration = (asset.begin ?? 0) - (prevAsset.begin ?? 0);
+        prevAsset.duration = asset.begin - prevAsset.begin;
       } else if (prevAsset.title != '' && asset.title == '') {
-        asset.duration =
-            (asset.duration ?? 0) -
-            ((prevAsset.begin ?? 0) +
-                (prevAsset.duration ?? 0) -
-                (asset.begin ?? 0));
-        asset.duration = math.max(asset.duration ?? 0, 0);
-        asset.begin = (prevAsset.begin ?? 0) + (prevAsset.duration ?? 0);
+        asset.duration -= prevAsset.begin + prevAsset.duration - asset.begin;
+        asset.duration = math.max(asset.duration, 0);
+        asset.begin = prevAsset.begin + prevAsset.duration;
       } else if (prevAsset.title != '' && asset.title != '') {
         // Nothing, only insert space in a second loop if it´s neccesary
       }
     }
 
     // Remove duplicated spaces
-    layers[layerIndex].assets.removeWhere(
-      (asset) => (asset.duration ?? 0) <= 0,
-    );
+    layers[layerIndex].assets.removeWhere((asset) => asset.duration <= 0);
 
     // Second loop to insert spaces between assets or move asset
     for (int i = 1; i < layers[layerIndex].assets.length; i++) {
       Asset asset = layers[layerIndex].assets[i];
       Asset prevAsset = layers[layerIndex].assets[i - 1];
-      if ((asset.begin ?? 0) >
-          ((prevAsset.begin ?? 0) + (prevAsset.duration ?? 0))) {
+      if (asset.begin > prevAsset.begin + prevAsset.duration) {
         Asset newAsset = Asset(
           type: AssetType.text,
-          begin: (prevAsset.begin ?? 0) + (prevAsset.duration ?? 0),
-          duration:
-              (asset.begin ?? 0) -
-              ((prevAsset.begin ?? 0) + (prevAsset.duration ?? 0)),
+          begin: prevAsset.begin + prevAsset.duration,
+          duration: asset.begin - (prevAsset.begin + prevAsset.duration),
           title: '',
           srcPath: '',
         );
         layers[layerIndex].assets.insert(i, newAsset);
       } else {
-        asset.begin = (prevAsset.begin ?? 0) + (prevAsset.duration ?? 0);
+        asset.begin = prevAsset.begin + prevAsset.duration;
       }
     }
     if (layers[layerIndex].assets.isNotEmpty &&
-        (layers[layerIndex].assets[0].begin ?? 0) > 0) {
+        layers[layerIndex].assets[0].begin > 0) {
       Asset newAsset = Asset(
         type: AssetType.text,
         begin: 0,
-        duration: layers[layerIndex].assets[0].begin ?? 0,
+        duration: layers[layerIndex].assets[0].begin,
         title: '',
         srcPath: '',
       );
@@ -547,14 +620,13 @@ class DirectorService {
     // Last space until video duration
     if (layers[layerIndex].assets.last.title == '') {
       layers[layerIndex].assets.last.duration =
-          duration - (layers[layerIndex].assets.last.begin ?? 0);
+          duration - layers[layerIndex].assets.last.begin;
     } else {
       Asset prevAsset = layers[layerIndex].assets.last;
       Asset asset = Asset(
         type: AssetType.text,
-        begin: (prevAsset.begin ?? 0) + (prevAsset.duration ?? 0),
-        duration:
-            duration - ((prevAsset.begin ?? 0) + (prevAsset.duration ?? 0)),
+        begin: prevAsset.begin + prevAsset.duration,
+        duration: duration - (prevAsset.begin + prevAsset.duration),
         title: '',
         srcPath: '',
       );
@@ -563,17 +635,58 @@ class DirectorService {
   }
 
   _addAssetToLayer(int layerIndex, AssetType type, String srcPath) async {
-    _ensureDefaultLayers();
-    if (layerIndex >= layers.length) {
-      // Optionally, add more layers if needed (should not happen with default 3 layers)
+    print('_addAssetToLayer: type=$type, srcPath=$srcPath');
+
+    // Verify file exists
+    final file = File(srcPath);
+    if (!await file.exists()) {
+      print('ERROR: File does not exist: $srcPath');
       return;
     }
-    print('_addAssetToLayer: $srcPath');
+
+    // Copy file to persistent location to avoid iOS temporary file cleanup
+    String persistentPath = await _copyToPersistentLocation(srcPath, type);
+    print('File copied to persistent location: $persistentPath');
+
+    // Verify asset type matches file extension
+    final extension = srcPath.toLowerCase().split('.').last;
+    if (type == AssetType.image) {
+      final imageExtensions = [
+        'jpg',
+        'jpeg',
+        'png',
+        'gif',
+        'bmp',
+        'webp',
+        'svg',
+        'heic',
+      ];
+      if (!imageExtensions.contains(extension)) {
+        print(
+          'WARNING: Image asset has non-image extension: $srcPath (extension: $extension)',
+        );
+      }
+    } else if (type == AssetType.video) {
+      final videoExtensions = [
+        'mp4',
+        'mov',
+        'avi',
+        'mkv',
+        'wmv',
+        'flv',
+        '3gp',
+        'm4v',
+      ];
+      if (!videoExtensions.contains(extension)) {
+        print(
+          'WARNING: Video asset has non-video extension: $srcPath (extension: $extension)',
+        );
+      }
+    }
 
     int assetDuration;
     if (type == AssetType.video || type == AssetType.audio) {
-      // TODO: Replace with actual video/audio duration logic
-      assetDuration = 5000;
+      assetDuration = await generator.getVideoDuration(persistentPath);
     } else {
       assetDuration = 5000;
     }
@@ -581,31 +694,60 @@ class DirectorService {
     layers[layerIndex].assets.add(
       Asset(
         type: type,
-        srcPath: srcPath,
+        srcPath: persistentPath, // Use persistent path instead of original
         title: p.basename(srcPath),
         duration: assetDuration,
         begin: layers[layerIndex].assets.isEmpty
             ? 0
-            : (layers[layerIndex].assets.last.begin ?? 0) +
-                  (layers[layerIndex].assets.last.duration ?? 0),
+            : layers[layerIndex].assets.last.begin +
+                  layers[layerIndex].assets.last.duration,
       ),
     );
 
-    // Always re-initialize layerPlayers[0] after adding a video asset
-    if (type == AssetType.video && layers[0].assets.isNotEmpty) {
-      if (layerPlayers.length < 1) {
-        layerPlayers.length = 1;
-      }
-      if (layerPlayers[0] != null) {
-        await layerPlayers[0]!.dispose();
-      }
-      layerPlayers[0] = LayerPlayer(layers[0]);
-      await layerPlayers[0]!.initialize();
-      layerPlayers[0]!.currentAssetIndex = layers[0].assets.length - 1;
-    }
+    layerPlayers[layerIndex]?.addMediaSource(
+      layers[layerIndex].assets.length - 1,
+      layers[layerIndex].assets.last,
+    );
 
     _layersChanged.add(true);
     _appBar.add(true);
+  }
+
+  /// Copy file from temporary location to persistent app documents directory
+  Future<String> _copyToPersistentLocation(
+    String srcPath,
+    AssetType type,
+  ) async {
+    try {
+      // Get app documents directory
+      final appDocDir = await getApplicationDocumentsDirectory();
+
+      // Create subdirectory based on asset type
+      final subdirName = type == AssetType.image ? 'images' : 'videos';
+      final targetDir = Directory(p.join(appDocDir.path, 'media', subdirName));
+      await targetDir.create(recursive: true);
+
+      // Generate unique filename to avoid conflicts
+      final originalFile = File(srcPath);
+      final fileName = p.basename(srcPath);
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final extension = p.extension(fileName);
+      final baseName = p.basenameWithoutExtension(fileName);
+      final uniqueFileName = '${baseName}_$timestamp$extension';
+
+      // Create target file path
+      final targetPath = p.join(targetDir.path, uniqueFileName);
+
+      // Copy file
+      await originalFile.copy(targetPath);
+
+      print('File copied from $srcPath to $targetPath');
+      return targetPath;
+    } catch (e) {
+      print('ERROR copying file: $e');
+      // Return original path as fallback
+      return srcPath;
+    }
   }
 
   select(int layerIndex, int assetIndex) async {
@@ -640,7 +782,7 @@ class DirectorService {
     Asset assetSelected = layers[layerIndex].assets[assetIndex];
     int closest = assetIndex;
     int pos =
-        (assetSelected.begin ?? 0) +
+        assetSelected.begin +
         ((dragX + scrollController.offset - selected.initScrollOffset) /
                 pixelsPerSecond *
                 1000)
@@ -648,7 +790,7 @@ class DirectorService {
     if (dragX + scrollController.offset - selected.initScrollOffset < 0) {
       closest = getClosestAssetIndexLeft(layerIndex, assetIndex, pos);
     } else {
-      pos = pos + (assetSelected.duration ?? 0);
+      pos = pos + assetSelected.duration;
       closest = getClosestAssetIndexRight(layerIndex, assetIndex, pos);
     }
     updateScrollOnDrag(pos, scrollWidth);
@@ -691,11 +833,10 @@ class DirectorService {
 
   int getClosestAssetIndexLeft(int layerIndex, int assetIndex, int pos) {
     int closest = assetIndex;
-    int distance = (pos - (layers[layerIndex].assets[assetIndex].begin ?? 0))
-        .abs();
+    int distance = (pos - layers[layerIndex].assets[assetIndex].begin).abs();
     if (assetIndex < 1) return assetIndex;
     for (int i = assetIndex - 1; i >= 0; i--) {
-      int d = (pos - (layers[layerIndex].assets[i].begin ?? 0)).abs();
+      int d = (pos - layers[layerIndex].assets[i].begin).abs();
       if (d < distance) {
         closest = i;
         distance = d;
@@ -707,15 +848,14 @@ class DirectorService {
   int getClosestAssetIndexRight(int layerIndex, int assetIndex, int pos) {
     int closest = assetIndex;
     int endAsset =
-        (layers[layerIndex].assets[assetIndex].begin ?? 0) +
-        (layers[layerIndex].assets[assetIndex].duration ?? 0);
+        layers[layerIndex].assets[assetIndex].begin +
+        layers[layerIndex].assets[assetIndex].duration;
     int distance = (pos - endAsset).abs();
     if (assetIndex >= layers[layerIndex].assets.length - 1) return assetIndex;
     for (int i = assetIndex + 1; i < layers[layerIndex].assets.length; i++) {
       int end =
-          (layers[layerIndex].assets[i].begin ?? 0) +
-          (layers[layerIndex].assets[i].duration ?? 0);
-      layers[layerIndex].assets[i].duration;
+          layers[layerIndex].assets[i].begin +
+          layers[layerIndex].assets[i].duration;
       int d = (pos - end).abs();
       if (d < distance) {
         closest = i;
@@ -751,10 +891,10 @@ class DirectorService {
     Asset asset1 = layers[layerIndex].assets[assetIndex1];
 
     layers[layerIndex].assets.removeAt(assetIndex1);
-    // No removeMediaSource in standard video_player API
+    await layerPlayers[layerIndex]?.removeMediaSource(assetIndex1);
 
     layers[layerIndex].assets.insert(assetIndex2, asset1);
-    // No addMediaSource in standard video_player API
+    await layerPlayers[layerIndex]?.addMediaSource(assetIndex2, asset1);
 
     refreshCalculatedFieldsInAssets(layerIndex, 0);
     _layersChanged.add(true);
@@ -768,10 +908,10 @@ class DirectorService {
   moveTextAsset() {
     int layerIndex = selected.layerIndex;
     int assetIndex = selected.assetIndex;
-    if (layerIndex == -1 || assetIndex == -1) return;
+    if (layerIndex == -1 || assetIndex == -1 || assetSelected == null) return;
 
     int pos =
-        (assetSelected?.begin ?? 0) +
+        assetSelected!.begin +
         ((selected.dragX +
                     scrollController.offset -
                     selected.initScrollOffset) /
@@ -788,34 +928,67 @@ class DirectorService {
     _previewOnPosition();
   }
 
+  /// Cuts the currently selected video asset at the current playhead position.
   cutVideo() async {
     if (isOperating) return;
+
+    /// This is a safeguard to prevent cutting when no asset is selected
     if (selected.layerIndex == -1 || selected.assetIndex == -1) return;
     print('>> DirectorService.cutVideo()');
+
+    /// Get the currently selected asset
     final Asset assetAfter =
         layers[selected.layerIndex].assets[selected.assetIndex];
-    final int diff = position - (assetAfter.begin ?? 0);
-    if (diff <= 0 || diff >= (assetAfter.duration ?? 0)) return;
+
+    /// Calculates how far into the asset the cut position is
+    /// [Position]: Current timeline playhead position (in ms)
+    /// [AssetAfter.begin]: Where the asset begins on the timeline (in ms)
+    final int diff = position - assetAfter.begin;
+    if (diff <= 0 || diff >= assetAfter.duration) return;
     isCutting = true;
 
+    /// Create an exact copy of the original asset
     final Asset assetBefore = Asset.clone(assetAfter);
     layers[selected.layerIndex].assets.insert(selected.assetIndex, assetBefore);
 
+    /// For the first asset
+    /// Duration becomes the time from asset start to cut position
     assetBefore.duration = diff;
-    assetAfter.begin = assetBefore.begin! + diff;
-    assetAfter.cutFrom = assetBefore.cutFrom! + diff;
-    assetAfter.duration = assetAfter.duration! - diff;
 
-    // No removeMediaSource in standard video_player API
-    // No addMediaSource in standard video_player API
+    /// For the second asset
+    /// [begin]: Timeline position shifts forward by diff milliseconds
+    /// [cutFrom]: Source media starting point shifts forward (skips the first part)
+    /// [duration]: Shortened by removing the first part
+    assetAfter.begin = assetBefore.begin + diff;
+    assetAfter.cutFrom = assetBefore.cutFrom + diff;
+    assetAfter.duration = assetAfter.duration - diff;
 
+    /// Media Source Updates
+
+    /// 1. Remove the original media source at the selected asset index
+    layerPlayers[selected.layerIndex]?.removeMediaSource(selected.assetIndex);
+
+    /// 2. Add the new media source for the asset before the cut
+    await layerPlayers[selected.layerIndex]?.addMediaSource(
+      selected.assetIndex,
+      assetBefore,
+    );
+
+    /// 3. Add the new media source for the asset after the cut
+    await layerPlayers[selected.layerIndex]?.addMediaSource(
+      selected.assetIndex + 1,
+      assetAfter,
+    );
+
+    /// Trigger UI refresh
     _layersChanged.add(true);
 
     if (assetAfter.type == AssetType.video) {
       assetAfter.thumbnailPath = null;
-      // TODO: Generate video thumbnails if needed
+      _generateAllVideoThumbnails(layers[selected.layerIndex].assets);
     }
 
+    /// Clears selection
     _selected.add(Selected(-1, -1));
     _appBar.add(true);
 
@@ -828,12 +1001,15 @@ class DirectorService {
 
   delete() {
     if (isOperating) return;
-    if (selected.layerIndex == -1 || selected.assetIndex == -1) return;
+    if (selected.layerIndex == -1 ||
+        selected.assetIndex == -1 ||
+        assetSelected == null)
+      return;
     print('>> DirectorService.delete()');
     isDeleting = true;
-    AssetType? type = assetSelected?.type;
+    AssetType type = assetSelected!.type;
     layers[selected.layerIndex].assets.removeAt(selected.assetIndex);
-    // No removeMediaSource in standard video_player API
+    layerPlayers[selected.layerIndex]?.removeMediaSource(selected.assetIndex);
     if (type != AssetType.text) {
       refreshCalculatedFieldsInAssets(selected.layerIndex, selected.assetIndex);
     }
@@ -864,8 +1040,8 @@ class DirectorService {
     for (int i = assetIndex; i < layers[layerIndex].assets.length; i++) {
       layers[layerIndex].assets[i].begin = (i == 0)
           ? 0
-          : (layers[layerIndex].assets[i - 1].begin ?? 0) +
-                (layers[layerIndex].assets[i - 1].duration ?? 0);
+          : layers[layerIndex].assets[i - 1].begin +
+                layers[layerIndex].assets[i - 1].duration;
     }
   }
 
@@ -878,14 +1054,17 @@ class DirectorService {
   }
 
   scaleUpdate(double scale) {
-    if (!isScaling || _pixelsPerSecondOnInitScale == null) return;
+    if (!isScaling ||
+        _pixelsPerSecondOnInitScale == null ||
+        _scrollOffsetOnInitScale == null)
+      return;
     double pixPerSecond = _pixelsPerSecondOnInitScale! * scale;
     pixPerSecond = math.min(pixPerSecond, 100);
     pixPerSecond = math.max(pixPerSecond, 1);
     _pixelsPerSecond.add(pixPerSecond);
     _layersChanged.add(true);
     scrollController.jumpTo(
-      (_scrollOffsetOnInitScale! * pixPerSecond) / _pixelsPerSecondOnInitScale!,
+      _scrollOffsetOnInitScale! * pixPerSecond / _pixelsPerSecondOnInitScale!,
     );
   }
 
@@ -896,11 +1075,11 @@ class DirectorService {
 
   Asset? getAssetByPosition(int layerIndex) {
     for (int i = 0; i < layers[layerIndex].assets.length; i++) {
-      final asset = layers[layerIndex].assets[i];
-      final begin = asset.begin ?? 0;
-      final duration = asset.duration ?? 0;
-      if (begin + duration - 1 >= position) {
-        return asset;
+      if (layers[layerIndex].assets[i].begin +
+              layers[layerIndex].assets[i].duration -
+              1 >=
+          position) {
+        return layers[layerIndex].assets[i];
       }
     }
     return null;
@@ -926,43 +1105,58 @@ class DirectorService {
   }
 
   executeSizer(bool sizerEnd) async {
-    Asset? asset = assetSelected;
-    if (asset == null) return;
+    if (assetSelected == null) return;
+    var asset = assetSelected!;
     if (asset.type == AssetType.text || asset.type == AssetType.image) {
       int dxSizerDragMillis = (dxSizerDrag / pixelsPerSecond * 1000).floor();
       if (!isSizerDraggingEnd) {
-        if ((asset.begin ?? 0) + dxSizerDragMillis < 0) {
-          dxSizerDragMillis = -(asset.begin ?? 0);
+        if (asset.begin + dxSizerDragMillis < 0) {
+          dxSizerDragMillis = -asset.begin;
         }
-        if ((asset.duration ?? 0) - dxSizerDragMillis < 1000) {
-          dxSizerDragMillis = (asset.duration ?? 0) - 1000;
+        if (asset.duration - dxSizerDragMillis < 1000) {
+          dxSizerDragMillis = asset.duration - 1000;
         }
-        asset.begin = (asset.begin ?? 0) + dxSizerDragMillis;
-        asset.duration = (asset.duration ?? 0) - dxSizerDragMillis;
+        asset.begin += dxSizerDragMillis;
+        asset.duration -= dxSizerDragMillis;
       } else {
-        if ((asset.duration ?? 0) + dxSizerDragMillis < 1000) {
-          dxSizerDragMillis = -(asset.duration ?? 0) + 1000;
+        if (asset.duration + dxSizerDragMillis < 1000) {
+          dxSizerDragMillis = -asset.duration + 1000;
         }
-        asset.duration = (asset.duration ?? 0) + dxSizerDragMillis;
+        asset.duration += dxSizerDragMillis;
       }
       if (asset.type == AssetType.text) {
         reorganizeTextAssets(1);
-      } else if (asset.type == AssetType.image) {
-        refreshCalculatedFieldsInAssets(
-          selected.layerIndex,
-          selected.assetIndex,
-        );
-        // No removeMediaSource/addMediaSource in standard video_player API
       }
-      _selected.add(Selected(-1, -1));
     }
-    _layersChanged.add(true);
+    _layersChanged.add(true); // Show images
   }
 
-  // generateVideo removed (generator and VideoResolution undefined)
-
-  _deleteThumbnailsNotUsed() async {
-    // TODO: pending to implement
-    // TODO: implement thumbnail cleanup if needed
+  generateVideo(List<Layer> layers, VideoResolution videoResolution) async {
+    if (isOperating) return;
+    isGenerating = true;
+    try {
+      await generator.generateVideoAll(layers, videoResolution);
+    } catch (e) {
+      logger.e('Error generating video: $e');
+    } finally {
+      isGenerating = false;
+      _layersChanged.add(true);
+    }
   }
+
+  // _deleteThumbnailsNotUsed() async {
+  //   // TODO: pending to implement
+  //   Directory appDocDir = await getApplicationDocumentsDirectory();
+  //   Directory fontsDir = Directory(p.join(appDocDir.parent.path, 'code_cache'));
+
+  //   List<FileSystemEntity> entityList = fontsDir.listSync(
+  //     recursive: true,
+  //     followLinks: false,
+  //   );
+  //   for (FileSystemEntity entity in entityList) {
+  //     if (!await FileSystemEntity.isFile(entity.path) &&
+  //         entity.path.split('/').last.startsWith('open_director')) {}
+  //     //print(entity.path);
+  //   }
+  // }
 }

@@ -11,7 +11,7 @@ class AssetSizer extends StatelessWidget {
   final int layerIndex;
   final bool sizerEnd;
 
-  AssetSizer(this.layerIndex, this.sizerEnd) : super();
+  AssetSizer(this.layerIndex, this.sizerEnd, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -22,26 +22,26 @@ class AssetSizer extends StatelessWidget {
         Color color = Colors.transparent;
         double left = -50;
         IconData? iconData;
-        if (selected.data?.layerIndex == layerIndex &&
-            selected.data?.assetIndex != -1 &&
+        final data = selected.data;
+        if (data != null &&
+            data.layerIndex == layerIndex &&
+            data.assetIndex != -1 &&
             !directorService.isDragging) {
-          Asset asset = directorService
-              .layers[layerIndex]
-              .assets[selected.data!.assetIndex!];
+          Asset asset =
+              directorService.layers[layerIndex].assets[data.assetIndex];
           if (asset.type == AssetType.text || asset.type == AssetType.image) {
-            left = asset.begin! * directorService.pixelsPerSecond / 1000.0;
+            left = asset.begin * directorService.pixelsPerSecond / 1000.0;
             if (sizerEnd) {
-              left +=
-                  asset.duration! * directorService.pixelsPerSecond / 1000.0;
+              left += asset.duration * directorService.pixelsPerSecond / 1000.0;
               if (directorService.isSizerDraggingEnd) {
                 left += directorService.dxSizerDrag;
               }
               if (left <
-                  (asset.begin! + 1000) *
+                  (asset.begin + 1000) *
                       directorService.pixelsPerSecond /
                       1000.0) {
                 left =
-                    (asset.begin! + 1000) *
+                    (asset.begin + 1000) *
                     directorService.pixelsPerSecond /
                     1000.0;
               }
@@ -51,11 +51,11 @@ class AssetSizer extends StatelessWidget {
                 left += directorService.dxSizerDrag;
               }
               if (left >
-                  (asset.begin! + asset.duration! - 1000) *
+                  (asset.begin + asset.duration - 1000) *
                       directorService.pixelsPerSecond /
                       1000.0) {
                 left =
-                    (asset.begin! + asset.duration! - 1000) *
+                    (asset.begin + asset.duration - 1000) *
                     directorService.pixelsPerSecond /
                     1000.0;
               }
@@ -86,7 +86,7 @@ class AssetSizer extends StatelessWidget {
               color: color,
               child: iconData != null
                   ? Icon(iconData, size: 30, color: Colors.white)
-                  : const SizedBox.shrink(),
+                  : null,
             ),
             onHorizontalDragStart: (detail) =>
                 directorService.sizerDragStart(sizerEnd),

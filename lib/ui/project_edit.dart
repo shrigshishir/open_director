@@ -55,7 +55,8 @@ class _ProjectEditForm extends StatelessWidget {
                   initialValue: projectService.project?.title,
                   maxLength: 75,
                   onSaved: (value) {
-                    projectService.project?.title = value ?? "New Video";
+                    projectService.project?.title =
+                        value ?? "New project title";
                   },
                   decoration: InputDecoration(
                     labelText: 'Title',
@@ -75,7 +76,8 @@ class _ProjectEditForm extends StatelessWidget {
                   maxLines: 3,
                   maxLength: 1000,
                   onSaved: (value) {
-                    projectService.project?.description = value;
+                    projectService.project?.description =
+                        value ?? "This is a new project description";
                   },
                   decoration: InputDecoration(
                     labelText: 'Description (optional)',
@@ -86,7 +88,7 @@ class _ProjectEditForm extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: <Widget>[
-                    ElevatedButton(
+                    TextButton(
                       child: Text('Cancel'),
                       onPressed: () {
                         Navigator.pop(context);
@@ -102,10 +104,12 @@ class _ProjectEditForm extends StatelessWidget {
                           _formKey.currentState?.save();
 
                           // To hide soft keyboard
-                          FocusScope.of(context).requestFocus(FocusNode());
+                          FocusScope.of(context).requestFocus(new FocusNode());
 
                           if (projectService.project?.id == null) {
-                            await projectService.insert(projectService.project);
+                            await projectService.insert(
+                              projectService.project!,
+                            );
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
@@ -114,7 +118,9 @@ class _ProjectEditForm extends StatelessWidget {
                               ),
                             );
                           } else {
-                            await projectService.update(projectService.project);
+                            await projectService.update(
+                              projectService.project!,
+                            );
                             Navigator.pop(context);
                           }
                         }
@@ -129,7 +135,7 @@ class _ProjectEditForm extends StatelessWidget {
       ),
       onTap: () {
         // To hide soft keyboard
-        FocusScope.of(context).requestFocus(FocusNode());
+        FocusScope.of(context).requestFocus(new FocusNode());
       },
     );
   }

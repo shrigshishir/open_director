@@ -1,10 +1,10 @@
 import 'dart:core';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:flutter_video_editor_app/model/model.dart';
 import 'package:flutter_video_editor_app/service/director_service.dart';
 import 'package:flutter_video_editor_app/service_locator.dart';
 import 'package:flutter_video_editor_app/ui/director/params.dart';
+import 'package:flutter_video_editor_app/model/model.dart';
 
 class ColorEditor extends StatelessWidget {
   final directorService = locator.get<DirectorService>();
@@ -59,14 +59,13 @@ class ColorForm extends StatelessWidget {
                 child: ColorPicker(
                   pickerColor: Color(fontColor),
                   paletteType: PaletteType.hsv,
-
                   enableAlpha: true,
                   colorPickerWidth: 240,
                   pickerAreaHeightPercent: 0.8,
                   onColorChanged: (color) {
-                    Asset newAsset = Asset.clone(
-                      directorService.editingTextAsset!,
-                    );
+                    final editingTextAsset = directorService.editingTextAsset;
+                    if (editingTextAsset == null) return;
+                    Asset newAsset = Asset.clone(editingTextAsset);
                     if (directorService.editingColor == 'fontColor') {
                       newAsset.fontColor = color.value;
                     } else if (directorService.editingColor == 'boxcolor') {
@@ -85,7 +84,7 @@ class ColorForm extends StatelessWidget {
               ElevatedButton(
                 child: Text('SELECT'),
                 onPressed: () {
-                  directorService.editingColor = null;
+                  directorService.editingColor = '';
                 },
               ),
             ],

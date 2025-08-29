@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'dart:core';
 import 'package:flutter/material.dart';
 import 'package:flutter_video_editor_app/model/model.dart';
@@ -10,48 +9,50 @@ class AssetSelection extends StatelessWidget {
   final directorService = locator.get<DirectorService>();
   final int layerIndex;
 
-  AssetSelection(this.layerIndex) : super();
+  AssetSelection(this.layerIndex, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
       stream: directorService.selected$,
       initialData: Selected(-1, -1),
+
       builder: (BuildContext context, AsyncSnapshot<Selected> selected) {
         Color borderColor = Colors.pinkAccent;
         double left, width;
-        if (selected.data?.layerIndex == layerIndex &&
-            selected.data?.assetIndex != -1) {
+        final data = selected.data;
+        if (data != null &&
+            data.layerIndex == layerIndex &&
+            data.assetIndex != -1) {
           if (directorService.isDragging || directorService.isSizerDragging) {
             borderColor = Colors.greenAccent;
           }
-          Asset asset = directorService
-              .layers[layerIndex]
-              .assets[selected.data!.assetIndex!];
+          Asset asset =
+              directorService.layers[layerIndex].assets[data.assetIndex];
           left =
-              (asset.begin! * directorService.pixelsPerSecond / 1000.0) +
-              (selected.data!.dragX) +
-              (selected.data!.incrScrollOffset);
-          width = (asset.duration! * directorService.pixelsPerSecond / 1000.0);
+              asset.begin * directorService.pixelsPerSecond / 1000.0 +
+              data.dragX +
+              data.incrScrollOffset;
+          width = asset.duration * directorService.pixelsPerSecond / 1000.0;
           if (directorService.isSizerDragging &&
               !directorService.isSizerDraggingEnd) {
             left += directorService.dxSizerDrag;
             if (left >
-                ((asset.begin! + asset.duration! - 1000) *
+                (asset.begin + asset.duration - 1000) *
                     directorService.pixelsPerSecond /
-                    1000)) {
+                    1000) {
               left =
-                  ((asset.begin! + asset.duration! - 1000) *
+                  (asset.begin + asset.duration - 1000) *
                   directorService.pixelsPerSecond /
-                  1000);
+                  1000;
             }
             if (left < 0) {
               left = 0;
             }
             width =
-                ((asset.begin! + asset.duration!) *
+                (asset.begin + asset.duration) *
                     directorService.pixelsPerSecond /
-                    1000) -
+                    1000 -
                 left;
           } else if (directorService.isSizerDragging) {
             width += directorService.dxSizerDrag;
@@ -83,12 +84,12 @@ class AssetSelection extends StatelessWidget {
               ),
             ),
             onLongPressStart: (LongPressStartDetails details) {
-              directorService.dragStart(layerIndex, selected.data?.assetIndex);
+              directorService.dragStart(layerIndex, data?.assetIndex ?? -1);
             },
             onLongPressMoveUpdate: (LongPressMoveUpdateDetails details) {
               directorService.dragSelected(
                 layerIndex,
-                selected.data?.assetIndex ?? 0,
+                data?.assetIndex ?? -1,
                 details.offsetFromOrigin.dx,
                 MediaQuery.of(context).size.width,
               );

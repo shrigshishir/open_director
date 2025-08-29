@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'dart:core';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -8,38 +7,41 @@ import 'package:flutter_video_editor_app/service/director_service.dart';
 import 'package:flutter_video_editor_app/service_locator.dart';
 import 'package:flutter_video_editor_app/ui/common/animated_dialog.dart';
 import 'package:flutter_video_editor_app/ui/director/app_bar.dart';
+import 'package:flutter_video_editor_app/ui/director/asset_selection.dart';
 import 'package:flutter_video_editor_app/ui/director/color_editor.dart';
+import 'package:flutter_video_editor_app/ui/director/drag_closest.dart';
 import 'package:flutter_video_editor_app/ui/director/params.dart';
 import 'package:flutter_video_editor_app/ui/director/text_asset_editor.dart';
+import 'package:flutter_video_editor_app/ui/director/text_form.dart';
+import 'package:flutter_video_editor_app/ui/director/text_player_editor.dart';
 import 'dart:async';
 import 'package:video_player/video_player.dart';
 
 class DirectorScreen extends StatefulWidget {
   final Project project;
-  const DirectorScreen(this.project, {super.key});
+  const DirectorScreen(this.project, {Key? key}) : super(key: key);
 
   @override
-  _DirectorScreen createState() => _DirectorScreen(project);
+  State<DirectorScreen> createState() => _DirectorScreen(project);
 }
 
 class _DirectorScreen extends State<DirectorScreen>
     with WidgetsBindingObserver {
   final directorService = locator.get<DirectorService>();
-  late StreamSubscription<bool> _dialogFilesNotExistSubscription;
+  late final StreamSubscription<bool> _dialogFilesNotExistSubscription;
 
   _DirectorScreen(Project project) {
     directorService.setProject(project);
-
     _dialogFilesNotExistSubscription = directorService.filesNotExist$.listen((
       val,
     ) {
       if (val) {
         // Delayed because widgets are building
-        Future.delayed(Duration(milliseconds: 100), () {
+        Future.delayed(const Duration(milliseconds: 100), () {
           AnimatedDialog.show(
             context,
             title: 'Some assets have been deleted',
-            child: Text(
+            child: const Text(
               'To continue you must recover deleted assets in your device '
               'or remove them from the timeline (marked in red).',
             ),
@@ -109,7 +111,10 @@ class _DirectorScreen extends State<DirectorScreen>
               // Hide keyboard
               FocusScope.of(context).requestFocus(FocusNode());
             },
-            child: Container(color: Colors.grey.shade900, child: _Director()),
+            child: Container(
+              color: Colors.grey.shade900,
+              child: const _Director(),
+            ),
           ),
         ),
       ),
@@ -118,10 +123,10 @@ class _DirectorScreen extends State<DirectorScreen>
 }
 
 class _Director extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
-
+  const _Director({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
+    final directorService = locator.get<DirectorService>();
     return Column(
       children: <Widget>[
         Container(
@@ -134,12 +139,12 @@ class _Director extends StatelessWidget {
               ? Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[AppBar1(), _Video(), AppBar2()],
+                  children: <Widget>[AppBar1(), const _Video(), AppBar2()],
                 )
               : Column(
                   mainAxisAlignment: MainAxisAlignment.start,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[AppBar1(), _Video(), AppBar2()],
+                  children: <Widget>[AppBar1(), const _Video(), AppBar2()],
                 ),
         ),
         Expanded(
@@ -151,36 +156,32 @@ class _Director extends StatelessWidget {
                   child: Stack(
                     alignment: const Alignment(-1, -1),
                     children: <Widget>[
-                      Container(
-                        child: GestureDetector(
-                          child: NotificationListener<ScrollNotification>(
-                            onNotification: (ScrollNotification scrollState) {
-                              if (scrollState is ScrollEndNotification) {
-                                directorService.endScroll();
-                              }
-                              return false;
-                            },
-                            child: _TimeLine(),
-                          ),
-                          onScaleStart: (ScaleStartDetails details) {
-                            directorService.scaleStart();
+                      GestureDetector(
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: (ScrollNotification scrollState) {
+                            if (scrollState is ScrollEndNotification) {
+                              directorService.endScroll();
+                            }
+                            return false;
                           },
-                          onScaleUpdate: (ScaleUpdateDetails details) {
-                            directorService.scaleUpdate(
-                              details.horizontalScale,
-                            );
-                          },
-                          onScaleEnd: (ScaleEndDetails details) {
-                            directorService.scaleEnd();
-                          },
+                          child: const _TimeLine(),
                         ),
+                        onScaleStart: (ScaleStartDetails details) {
+                          directorService.scaleStart();
+                        },
+                        onScaleUpdate: (ScaleUpdateDetails details) {
+                          directorService.scaleUpdate(details.horizontalScale);
+                        },
+                        onScaleEnd: (ScaleEndDetails details) {
+                          directorService.scaleEnd();
+                        },
                       ),
-                      _LayerHeaders(),
+                      const _LayerHeaders(),
                     ],
                   ),
                 ),
-                _PositionLine(),
-                _PositionMarker(),
+                const _PositionLine(),
+                const _PositionMarker(),
                 TextAssetEditor(),
                 ColorEditor(),
               ],
@@ -193,35 +194,36 @@ class _Director extends StatelessWidget {
 }
 
 class _PositionLine extends StatelessWidget {
+  const _PositionLine({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 2,
       height: Params.getTimelineHeight(context) - 4,
-      margin: EdgeInsets.fromLTRB(0, 2, 0, 2),
+      margin: const EdgeInsets.fromLTRB(0, 2, 0, 2),
       color: Colors.grey.shade100,
     );
   }
 }
 
 class _PositionMarker extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
-
+  const _PositionMarker({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
+    final directorService = locator.get<DirectorService>();
     return Container(
       width: 58,
       height: Params.RULER_HEIGHT - 4,
-      margin: EdgeInsets.fromLTRB(0, 2, 0, 2),
+      margin: const EdgeInsets.fromLTRB(0, 2, 0, 2),
       color: Colors.blue,
-      child: StreamBuilder(
+      child: StreamBuilder<int>(
         stream: directorService.position$,
         initialData: 0,
         builder: (BuildContext context, AsyncSnapshot<int> position) {
           return Center(
             child: Text(
               '${directorService.positionMinutes}:${directorService.positionSeconds}',
-              style: TextStyle(color: Colors.white, fontSize: 12),
+              style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           );
         },
@@ -231,11 +233,11 @@ class _PositionMarker extends StatelessWidget {
 }
 
 class _TimeLine extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
-
+  const _TimeLine({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
+    final directorService = locator.get<DirectorService>();
+    return StreamBuilder<bool>(
       stream: directorService.layersChanged$,
       initialData: false,
       builder: (BuildContext context, AsyncSnapshot<bool> layersChanged) {
@@ -245,7 +247,7 @@ class _TimeLine extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _Ruler(),
+              const _Ruler(),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: directorService.layers
@@ -264,10 +266,10 @@ class _TimeLine extends StatelessWidget {
 }
 
 class _Ruler extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
-
+  const _Ruler({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
+    final directorService = locator.get<DirectorService>();
     return CustomPaint(
       painter: RulerPainter(context),
       child: Container(
@@ -275,16 +277,14 @@ class _Ruler extends StatelessWidget {
         width:
             MediaQuery.of(context).size.width +
             directorService.pixelsPerSecond * directorService.duration / 1000,
-        margin: EdgeInsets.fromLTRB(0, 2, 0, 2),
+        margin: const EdgeInsets.fromLTRB(0, 2, 0, 2),
       ),
     );
   }
 }
 
 class RulerPainter extends CustomPainter {
-  final directorService = locator.get<DirectorService>();
   final BuildContext context;
-
   RulerPainter(this.context);
 
   getSecondsPerDivision(double pixPerSec) {
@@ -312,6 +312,7 @@ class RulerPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final directorService = locator.get<DirectorService>();
     final double width =
         directorService.duration / 1000 * directorService.pixelsPerSecond +
         MediaQuery.of(context).size.width;
@@ -372,10 +373,10 @@ class RulerPainter extends CustomPainter {
 }
 
 class _LayerHeaders extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
-
+  const _LayerHeaders({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
+    final directorService = locator.get<DirectorService>();
     return Column(
       mainAxisSize: MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -384,13 +385,15 @@ class _LayerHeaders extends StatelessWidget {
           height: Params.RULER_HEIGHT - 4,
           width: 33,
           color: Colors.transparent,
-          margin: EdgeInsets.fromLTRB(0, 2, 0, 2),
+          margin: const EdgeInsets.fromLTRB(0, 2, 0, 2),
         ),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: directorService.layers
               .asMap()
-              .map((index, layer) => MapEntry(index, _LayerHeader(layer.type)))
+              .map(
+                (index, layer) => MapEntry(index, _LayerHeader((layer).type)),
+              )
               .values
               .toList(),
         ),
@@ -400,11 +403,11 @@ class _LayerHeaders extends StatelessWidget {
 }
 
 class _Video extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
-
+  const _Video({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
+    final directorService = locator.get<DirectorService>();
+    return StreamBuilder<int>(
       stream: directorService.position$,
       builder: (BuildContext context, AsyncSnapshot<int> position) {
         var backgroundContainer = Container(
@@ -412,12 +415,14 @@ class _Video extends StatelessWidget {
           height: Params.getPlayerHeight(context),
           width: Params.getPlayerWidth(context),
         );
-        if (directorService.layerPlayers == null ||
-            directorService.layerPlayers.length == 0) {
+        if (directorService.layerPlayers.isEmpty) {
           return backgroundContainer;
         }
-        int assetIndex =
-            directorService.layerPlayers[0]?.currentAssetIndex ?? 0;
+        final layerPlayer = directorService.layerPlayers[0];
+        if (layerPlayer == null) {
+          return backgroundContainer;
+        }
+        int assetIndex = layerPlayer.currentAssetIndex;
         if (assetIndex == -1 ||
             assetIndex >= directorService.layers[0].assets.length) {
           return backgroundContainer;
@@ -429,12 +434,10 @@ class _Video extends StatelessWidget {
           child: Stack(
             children: [
               backgroundContainer,
-              (type == AssetType.video)
-                  ? VideoPlayer(
-                      directorService.layerPlayers[0]!.videoController,
-                    )
+              (type == AssetType.video && layerPlayer.videoController != null)
+                  ? VideoPlayer(layerPlayer.videoController!)
                   : _ImagePlayer(directorService.layers[0].assets[assetIndex]),
-              _TextPlayer(),
+              const _TextPlayer(),
             ],
           ),
         );
@@ -444,32 +447,42 @@ class _Video extends StatelessWidget {
 }
 
 class _ImagePlayer extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
   final Asset asset;
-
-  _ImagePlayer(this.asset) : super();
-
+  const _ImagePlayer(this.asset, {Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    if (asset.deleted ?? false) return Container();
-    return StreamBuilder(
+    final directorService = locator.get<DirectorService>();
+    if (asset.deleted) return Container();
+    return StreamBuilder<int>(
       stream: directorService.position$,
       initialData: 0,
       builder: (BuildContext context, AsyncSnapshot<int> position) {
-        int assetIndex =
-            directorService.layerPlayers[0]?.currentAssetIndex ?? 0;
+        if (directorService.layerPlayers.isEmpty ||
+            directorService.layerPlayers[0] == null) {
+          return Container();
+        }
+        int assetIndex = directorService.layerPlayers[0]!.currentAssetIndex;
+
+        // Additional safety checks
+        if (assetIndex == -1 ||
+            directorService.layers.isEmpty ||
+            directorService.layers[0].assets.isEmpty ||
+            assetIndex >= directorService.layers[0].assets.length) {
+          return Container();
+        }
+
         double ratio =
             (directorService.position -
-                (directorService.layers[0].assets[assetIndex].begin ?? 0)) /
-            (directorService.layers[0].assets[assetIndex].duration ?? 1);
+                directorService.layers[0].assets[assetIndex].begin) /
+            directorService.layers[0].assets[assetIndex].duration;
         if (ratio < 0) ratio = 0;
         if (ratio > 1) ratio = 1;
         return KenBurnEffect(
           asset.thumbnailMedPath ?? asset.srcPath,
           ratio,
-          zSign: asset.kenBurnZSign ?? 0,
-          xTarget: asset.kenBurnXTarget ?? 0.0,
-          yTarget: asset.kenBurnYTarget ?? 0.0,
+          zSign: asset.kenBurnZSign,
+          xTarget: asset.kenBurnXTarget,
+          yTarget: asset.kenBurnYTarget,
         );
       },
     );
@@ -484,13 +497,14 @@ class KenBurnEffect extends StatelessWidget {
   final double xTarget;
   final double yTarget;
 
-  KenBurnEffect(
+  const KenBurnEffect(
     this.path,
     this.ratio, {
     this.zSign = 0, // Options: {-1, 0, +1}
     this.xTarget = 0, // Options: {0, 0.5, 1}
     this.yTarget = 0, // Options; {0, 0.5, 1}
-  }) : super();
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -534,42 +548,40 @@ class KenBurnEffect extends StatelessWidget {
 }
 
 class _TextPlayer extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
-
+  const _TextPlayer({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
+    final directorService = locator.get<DirectorService>();
     return StreamBuilder<Asset?>(
       stream: directorService.editingTextAsset$,
       initialData: null,
       builder: (BuildContext context, AsyncSnapshot<Asset?> editingTextAsset) {
-        Asset? _asset =
-            editingTextAsset.data ?? directorService.getAssetByPosition(1);
-        if (_asset == null || _asset.type != AssetType.text) {
+        Asset? asset = editingTextAsset.data;
+        asset ??= directorService.getAssetByPosition(1);
+        if (asset == null || asset.type != AssetType.text) {
           return Container();
         }
-        // Font font = Font.getByPath(_asset.font); // Font not defined, fallback to default
+        Font font = Font.getByPath(asset.font);
         return Positioned(
-          left: (_asset.x ?? 0.0) * Params.getPlayerWidth(context),
-          top: (_asset.y ?? 0.0) * Params.getPlayerHeight(context),
-          child: Container(
-            child: (directorService.editingTextAsset == null)
-                ? Text(
-                    _asset.title ?? '',
-                    style: TextStyle(
-                      height: 1,
-                      fontSize:
-                          (_asset.fontSize ?? 14.0) *
-                          Params.getPlayerWidth(context) /
-                          MediaQuery.of(context).textScaleFactor,
-                      // fontStyle: font.style,
-                      // fontFamily: font.family,
-                      // fontWeight: font.weight,
-                      color: Color(_asset.fontColor ?? 0xFFFFFFFF),
-                      backgroundColor: Color(_asset.boxcolor ?? 0x00000000),
-                    ),
-                  )
-                : Container(), // TextPlayerEditor not defined
-          ),
+          left: asset.x * Params.getPlayerWidth(context),
+          top: asset.y * Params.getPlayerHeight(context),
+          child: (directorService.editingTextAsset == null)
+              ? Text(
+                  asset.title,
+                  style: TextStyle(
+                    height: 1,
+                    fontSize:
+                        asset.fontSize *
+                        Params.getPlayerWidth(context) /
+                        MediaQuery.of(context).textScaleFactor,
+                    fontStyle: font.style,
+                    fontFamily: font.family,
+                    fontWeight: font.weight,
+                    color: Color(asset.fontColor),
+                    backgroundColor: Color(asset.boxcolor),
+                  ),
+                )
+              : TextPlayerEditor(editingTextAsset.data),
         );
       },
     );
@@ -578,14 +590,13 @@ class _TextPlayer extends StatelessWidget {
 
 class _LayerHeader extends StatelessWidget {
   final String type;
-  _LayerHeader(this.type) : super();
-
+  const _LayerHeader(this.type, {Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return Container(
       height: Params.getLayerHeight(context, type),
       width: 28.0,
-      margin: EdgeInsets.fromLTRB(0, 1, 1, 1),
+      margin: const EdgeInsets.fromLTRB(0, 1, 1, 1),
       padding: const EdgeInsets.all(4.0),
       decoration: BoxDecoration(color: Colors.grey.shade800),
       child: Icon(
@@ -602,12 +613,11 @@ class _LayerHeader extends StatelessWidget {
 }
 
 class _LayerAssets extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
   final int layerIndex;
-  _LayerAssets(this.layerIndex) : super();
-
+  const _LayerAssets(this.layerIndex, {Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
+    final directorService = locator.get<DirectorService>();
     return Stack(
       alignment: const Alignment(0, 0),
       children: [
@@ -616,11 +626,12 @@ class _LayerAssets extends StatelessWidget {
             context,
             directorService.layers[layerIndex].type,
           ),
-          margin: EdgeInsets.all(1),
+          margin: const EdgeInsets.all(1),
           child: Row(
             children: [
               // Half left screen in blank
               Container(width: MediaQuery.of(context).size.width / 2),
+
               Row(
                 children: directorService.layers[layerIndex].assets
                     .asMap()
@@ -635,44 +646,37 @@ class _LayerAssets extends StatelessWidget {
             ],
           ),
         ),
-        // AssetSelection(layerIndex),
+        AssetSelection(layerIndex),
         // AssetSizer(layerIndex, false),
         // AssetSizer(layerIndex, true),
-        // (layerIndex != 1) ? DragClosest(layerIndex) : Container(),
+        (layerIndex != 1) ? DragClosest(layerIndex) : Container(),
       ],
     );
   }
 }
 
 class _Asset extends StatelessWidget {
-  final directorService = locator.get<DirectorService>();
   final int layerIndex;
   final int assetIndex;
-  _Asset(this.layerIndex, this.assetIndex) : super();
+  const _Asset(this.layerIndex, this.assetIndex, {Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
+    final directorService = locator.get<DirectorService>();
     Asset asset = directorService.layers[layerIndex].assets[assetIndex];
     Color backgroundColor = Colors.transparent;
     Color borderColor = Colors.transparent;
-    Color textColor = Colors.transparent;
-    Color backgroundTextColor = Colors.transparent;
-    if (asset.deleted == true) {
+    if (asset.deleted) {
       backgroundColor = Colors.red.shade200;
       borderColor = Colors.red;
-      textColor = Colors.red.shade900;
     } else if (layerIndex == 0) {
       backgroundColor = Colors.blue.shade200;
       borderColor = Colors.blue;
-      textColor = Colors.white;
-      backgroundTextColor = Colors.black.withOpacity(0.5);
-    } else if (layerIndex == 1 && (asset.title ?? '') != '') {
+    } else if (layerIndex == 1 && asset.title != '') {
       backgroundColor = Colors.blue.shade200;
       borderColor = Colors.blue;
-      textColor = Colors.blue.shade900;
     } else if (layerIndex == 2) {
       backgroundColor = Colors.orange.shade200;
       borderColor = Colors.orange;
-      textColor = Colors.orange.shade900;
     }
     return GestureDetector(
       child: Container(
@@ -680,22 +684,7 @@ class _Asset extends StatelessWidget {
           context,
           directorService.layers[layerIndex].type,
         ),
-        child: Text(
-          asset.title ?? '',
-          style: TextStyle(
-            color: textColor,
-            fontSize: 12,
-            backgroundColor: backgroundTextColor,
-            shadows: <Shadow>[
-              Shadow(
-                color: Colors.black,
-                offset: (layerIndex == 0) ? Offset(1, 1) : Offset(0, 0),
-              ),
-            ],
-          ),
-        ),
-        width:
-            (asset.duration ?? 1000) * directorService.pixelsPerSecond / 1000.0,
+        width: asset.duration * directorService.pixelsPerSecond / 1000.0,
         padding: const EdgeInsets.fromLTRB(4, 3, 4, 3),
         decoration: BoxDecoration(
           color: backgroundColor,
@@ -709,7 +698,7 @@ class _Asset extends StatelessWidget {
             right: BorderSide(width: 1, color: borderColor),
           ),
           image:
-              ((asset.deleted != true) &&
+              (!asset.deleted &&
                   asset.thumbnailPath != null &&
                   !directorService.isGenerating)
               ? DecorationImage(
@@ -720,6 +709,8 @@ class _Asset extends StatelessWidget {
                 )
               : null,
         ),
+        // Removed text overlay to clean up thumbnail display
+        child: SizedBox.shrink(),
       ),
       onTap: () => directorService.select(layerIndex, assetIndex),
       onLongPressStart: (LongPressStartDetails details) {

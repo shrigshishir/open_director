@@ -10,18 +10,17 @@ class GeneratedVideoService {
   List<GeneratedVideo> generatedVideoList = [];
   int? projectId;
 
-  BehaviorSubject<bool> _generatedVideoListChanged = BehaviorSubject.seeded(
-    false,
-  );
-  // Observable<bool> get generatedVideoListChanged$ =>
-  //     _generatedVideoListChanged.stream;
+  final BehaviorSubject<bool> _generatedVideoListChanged =
+      BehaviorSubject.seeded(false);
+  Stream<bool> get generatedVideoListChanged$ =>
+      _generatedVideoListChanged.stream;
   bool get generatedVideoListChanged => _generatedVideoListChanged.value;
 
   GeneratedVideoService() {
     open();
   }
 
-  dispose() {
+  void dispose() {
     _generatedVideoListChanged.close();
   }
 
@@ -29,28 +28,29 @@ class GeneratedVideoService {
     await projectDao.open();
   }
 
-  Stream<bool> get generatedVideoListChanged$ =>
-      _generatedVideoListChanged.stream;
-
-  void refresh(int projectId) async {
-    projectId = projectId;
+  void refresh(int _projectId) async {
+    projectId = _projectId;
     generatedVideoList = [];
     _generatedVideoListChanged.add(true);
-    generatedVideoList = await projectDao.findAllGeneratedVideo(projectId);
+    generatedVideoList = await projectDao.findAllGeneratedVideo(projectId!);
     _generatedVideoListChanged.add(true);
   }
 
-  fileExists(index) {
+  bool fileExists(int index) {
     return File(generatedVideoList[index].path).existsSync();
   }
 
-  delete(index) async {
-    if (fileExists(index)) File(generatedVideoList[index].path).deleteSync();
+  Future<void> delete(int index) async {
     if (generatedVideoList[index].id == null) {
-      print("Generated video id is null. Cannot delete generated video.");
+      print("Generated video id is null. Deletion failed...");
       return;
     }
+    if (fileExists(index)) File(generatedVideoList[index].path).deleteSync();
     await projectDao.deleteGeneratedVideo(generatedVideoList[index].id!);
-    refresh(projectId!);
+    if (projectId != null) {
+      refresh(projectId!);
+    } else {
+      print("projectId is null. Cannot refresh generated videos.");
+    }
   }
 }

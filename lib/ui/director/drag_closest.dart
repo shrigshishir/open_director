@@ -10,7 +10,7 @@ class DragClosest extends StatelessWidget {
   final directorService = locator.get<DirectorService>();
   final int layerIndex;
 
-  DragClosest(this.layerIndex) : super();
+  DragClosest(this.layerIndex, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -20,21 +20,20 @@ class DragClosest extends StatelessWidget {
       builder: (BuildContext context, AsyncSnapshot<Selected> selected) {
         Color color;
         double left;
+        final data = selected.data;
         if (directorService.isDragging &&
-            selected.data?.closestAsset != -1 &&
-            selected.data?.layerIndex == layerIndex) {
+            data != null &&
+            data.closestAsset != -1 &&
+            data.layerIndex == layerIndex) {
           color = Colors.pink;
-          Asset closestAsset = directorService
-              .layers[layerIndex]
-              .assets[selected.data!.closestAsset!];
-          if (selected.data!.closestAsset <= selected.data!.assetIndex) {
+          Asset closestAsset =
+              directorService.layers[layerIndex].assets[data.closestAsset];
+          if (data.closestAsset <= data.assetIndex) {
             left =
-                (closestAsset.begin ?? 0) *
-                directorService.pixelsPerSecond /
-                1000.0;
+                closestAsset.begin * directorService.pixelsPerSecond / 1000.0;
           } else {
             left =
-                ((closestAsset.begin ?? 0) + (closestAsset.duration ?? 0)) *
+                (closestAsset.begin + closestAsset.duration) *
                 directorService.pixelsPerSecond /
                 1000.0;
           }

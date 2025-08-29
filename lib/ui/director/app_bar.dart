@@ -1,14 +1,12 @@
 import 'dart:core';
 import 'package:flutter/material.dart';
 import 'package:flutter_video_editor_app/model/model.dart';
+import 'package:flutter_video_editor_app/service/director/generator.dart';
 import 'package:flutter_video_editor_app/service/director_service.dart';
 import 'package:flutter_video_editor_app/service_locator.dart';
 import 'package:flutter_video_editor_app/ui/director/params.dart';
 import 'package:flutter_video_editor_app/ui/director/progress_dialog.dart';
 import 'package:flutter_video_editor_app/ui/generated_video_list.dart';
-
-// Define the VideoResolution enum if not already defined elsewhere
-enum VideoResolution { fullHd, hd, sd }
 
 class AppBar1 extends StatelessWidget {
   final directorService = locator.get<DirectorService>();
@@ -83,7 +81,7 @@ class _AppBar1Landscape extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = <Widget>[];
+    List<Widget> children = [];
     children.add(_ButtonBack());
     if (directorService.selected.layerIndex != -1) {
       children.add(_ButtonDelete());
@@ -115,12 +113,9 @@ class _AppBar1Portrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = <Widget>[];
-    children.add(_ButtonBack());
     return AppBar(
       leading: _ButtonBack(),
-      title: Text(directorService.project?.title ?? ""),
-      actions: children,
+      title: Text(directorService.project?.title ?? "Untitled Project"),
     );
   }
 }
@@ -130,7 +125,7 @@ class _AppBar2Landscape extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = <Widget>[];
+    List<Widget> children = [];
     children.add(_ButtonAdd());
     if (directorService.layers[0].assets.isNotEmpty &&
         !directorService.isPlaying) {
@@ -161,16 +156,14 @@ class _AppBar2Portrait extends StatelessWidget {
   Widget build(BuildContext context) {
     List<Widget> children = [];
     children.add(_ButtonAdd());
-    if (directorService.layers.isNotEmpty &&
-        directorService.layers[0].assets.isNotEmpty &&
+    if (directorService.layers[0].assets.isNotEmpty &&
         !directorService.isPlaying) {
       children.add(_ButtonPlay());
     }
     if (directorService.isPlaying) {
       children.add(_ButtonPause());
     }
-    if (directorService.layers.isNotEmpty &&
-        directorService.layers[0].assets.isNotEmpty) {
+    if (directorService.layers[0].assets.isNotEmpty) {
       children.add(_ButtonGenerate());
     }
 
@@ -214,7 +207,7 @@ class _AppBar2EditingTextLandscape extends StatelessWidget {
               directorService.saveTextAsset();
             },
           ),
-          ElevatedButton(
+          TextButton(
             child: Text('Cancel'),
             onPressed: () {
               directorService.editingTextAsset = null;
@@ -231,7 +224,7 @@ class _AppBar2EditingTextPortrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    List<Widget> children = <Widget>[];
+    List<Widget> children = [];
     children.add(_ButtonAdd());
 
     return Container(
@@ -263,7 +256,7 @@ class _ButtonBack extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: Icon(Icons.arrow_back, color: Colors.grey.shade500),
+      icon: Icon(Icons.arrow_back_ios, color: Colors.white),
       tooltip: "Back",
       onPressed: () async {
         bool exit = await directorService.exitAndSaveProject();
@@ -299,8 +292,8 @@ class _ButtonCut extends StatelessWidget {
       tooltip: "Cut video selected",
       backgroundColor: Colors.blue,
       mini: MediaQuery.of(context).size.width < 900,
-      child: Icon(Icons.content_cut, color: Colors.white),
       onPressed: directorService.cutVideo,
+      child: Icon(Icons.content_cut, color: Colors.white),
     );
   }
 }
@@ -340,19 +333,19 @@ class _ButtonAdd extends StatelessWidget {
           directorService.add(result);
         },
         itemBuilder: (BuildContext context) => <PopupMenuEntry<AssetType>>[
-          PopupMenuItem<AssetType>(
+          const PopupMenuItem<AssetType>(
             value: AssetType.video,
             child: Text('Add video'),
           ),
-          PopupMenuItem<AssetType>(
+          const PopupMenuItem<AssetType>(
             value: AssetType.image,
             child: Text('Add image'),
           ),
-          PopupMenuItem<AssetType>(
+          const PopupMenuItem<AssetType>(
             value: AssetType.audio,
             child: Text('Add audio'),
           ),
-          PopupMenuItem<AssetType>(
+          const PopupMenuItem<AssetType>(
             value: AssetType.text,
             child: Text('Add title'),
           ),
@@ -402,8 +395,7 @@ class _ButtonGenerate extends StatelessWidget {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return CircularProgressIndicator();
-        // return ProgressDialog();
+        return ProgressDialog();
       },
     );
   }
@@ -420,7 +412,9 @@ class _ButtonGenerate extends StatelessWidget {
         icon: Icon(Icons.theaters, color: Colors.white),
         onSelected: (dynamic val) {
           if (directorService.project == null) {
-            // Show an error message or handle the case when the project is not available
+            print(
+              "Project is null. Theathers cannot be navigated to video list",
+            );
             return;
           }
           if (val == 99) {
@@ -432,7 +426,7 @@ class _ButtonGenerate extends StatelessWidget {
               ),
             );
           } else {
-            // directorService.generateVideo(directorService.layers, val); // TODO:
+            directorService.generateVideo(directorService.layers, val);
             showProgressDialog(context);
           }
         },

@@ -8,7 +8,7 @@ class TextForm extends StatelessWidget {
   final directorService = locator.get<DirectorService>();
   final Asset _asset;
 
-  TextForm(this._asset) : super();
+  TextForm(this._asset, {super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +16,7 @@ class TextForm extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SubMenu(),
-        Container(
+        SizedBox(
           width: MediaQuery.of(context).size.width - 120,
           child: Wrap(
             spacing: 0.0,
@@ -27,13 +27,13 @@ class TextForm extends StatelessWidget {
               _ColorField(
                 label: 'Color',
                 field: 'fontColor',
-                color: _asset.fontColor ?? 0,
+                color: _asset.fontColor,
                 size: 110,
               ),
               _ColorField(
                 label: 'Box color',
                 field: 'boxcolor',
-                color: _asset.boxcolor ?? 0,
+                color: _asset.boxcolor,
                 size: 140,
               ),
             ],
@@ -80,7 +80,7 @@ class _FontFamily extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 290,
       child: Row(
         children: [
@@ -91,7 +91,10 @@ class _FontFamily extends StatelessWidget {
           Padding(padding: EdgeInsets.symmetric(horizontal: 4)),
           DropdownButton(
             value: (directorService.editingTextAsset != null)
-                ? Font.getByPath(directorService.editingTextAsset?.font ?? '')
+                ? Font.getByPath(
+                    directorService.editingTextAsset?.font ??
+                        'assets/fonts/Amaranth-Regular.ttf',
+                  )
                 : Font.allFonts[0],
             items: Font.allFonts
                 .map(
@@ -111,7 +114,7 @@ class _FontFamily extends StatelessWidget {
                 .toList(),
             onChanged: (font) {
               Asset newAsset = Asset.clone(_asset);
-              newAsset.font = font?.path ?? '';
+              newAsset.font = font?.path ?? 'assets/fonts/Amaranth-Regular.ttf';
               directorService.editingTextAsset = newAsset;
             },
           ),
@@ -140,7 +143,7 @@ class _FontSize extends StatelessWidget {
           Slider(
             min: 0.03,
             max: 1,
-            value: math.sqrt(_asset.fontSize ?? 16),
+            value: math.sqrt(_asset.fontSize),
             onChanged: (size) {
               Asset newAsset = Asset.clone(_asset);
               newAsset.fontSize = size;

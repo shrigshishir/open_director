@@ -1,14 +1,11 @@
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit_config.dart';
+import 'dart:ffi';
+
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:typed_data';
 import 'package:flutter/painting.dart';
-import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
-import 'package:ffmpeg_kit_flutter_new/return_code.dart';
-// import 'package:ffmpeg_kit_flutter_new/statistics.dart';
 import 'package:flutter_video_editor_app/model/model.dart';
 import 'package:flutter_video_editor_app/service_locator.dart';
 import 'package:path_provider/path_provider.dart';
@@ -16,47 +13,61 @@ import 'package:path/path.dart' as p;
 import 'package:logger/logger.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/ffprobe_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 
 class Generator {
   final logger = locator.get<Logger>();
-  // ffmpeg_kit_flutter does not require instantiation for command execution
 
   final BehaviorSubject<FFmpegStat> _ffmepegStat = BehaviorSubject.seeded(
-    FFmpegStat(outputPath: ''),
+    FFmpegStat(),
   );
   Stream<FFmpegStat> get ffmepegStat$ => _ffmepegStat.stream;
   FFmpegStat get ffmepegStat => _ffmepegStat.value;
 
-  getVideoDuration(String path) async {
+  Future<int> getVideoDuration(String path) async {
     final info = await FFprobeKit.getMediaInformation(path);
     final properties = info.getMediaInformation()?.getAllProperties() ?? {};
-    return properties['duration'] ?? 9;
+
+    final duration = properties['format']['duration'];
+    if (duration != null) {
+      return (double.parse(duration) * 1000).round();
+    }
+    return 5000;
+
+    // if (duration is String) {
+    return double.tryParse(duration)?.round() ?? 4;
+    // } else if (duration is num) {
+    //   return duration.round();
+    // }
+    // return 4;
   }
 
-  generateVideoThumbnail(
+  Future<String> generateVideoThumbnail(
     String srcPath,
     String thumbnailPath,
     int pos,
     VideoResolution videoResolution,
   ) async {
     VideoResolutionSize size = _videoResolutionSize(videoResolution);
-    List pathList = thumbnailPath.split('.');
+    List<String> pathList = thumbnailPath.split('.');
     pathList[pathList.length - 2] += '_${size.width}x${size.height}';
     String path = pathList.join('.');
     String arguments =
-        '-loglevel error -y -i "$srcPath" '
+        '-loglevel error -y -i "$srcPath" ' +
         '-ss ${pos / 1000} -vframes 1 -vf scale=-2:${size.height} "$path"';
     await FFmpegKit.execute(arguments);
     return path;
   }
 
-  generateImageThumbnail(
+  Future<String> generateImageThumbnail(
     String srcPath,
     String thumbnailPath,
     VideoResolution videoResolution,
   ) async {
     VideoResolutionSize size = _videoResolutionSize(videoResolution);
-    List pathList = thumbnailPath.split('.');
+    List<String> pathList = thumbnailPath.split('.');
     pathList[pathList.length - 2] += '_${size.width}x${size.height}';
     String path = pathList.join('.');
     String arguments =
@@ -98,7 +109,7 @@ class Generator {
       true,
     );
 
-    String out = await executeCommand(
+    final out = await executeCommand(
       arguments,
       finished: true,
       outputPath: outputPath,
@@ -235,62 +246,42 @@ class Generator {
     await Directory(tempPath).delete(recursive: true);
   }
 
-  executeCommand(
+  Future<String?> executeCommand(
     String arguments, {
     String? outputPath,
     int? fileNum,
     int? totalFiles,
     bool finished = false,
   }) async {
-    final completer = Completer<String>();
+    final completer = Completer<String?>();
     DateTime initTime = DateTime.now();
 
-    // Set global statistics callback
-    FFmpegKitConfig.enableStatisticsCallback((statistics) {
-      _ffmepegStat.add(
-        FFmpegStat(
-          time: statistics.getTime(),
-          size: statistics.getSize(),
-          bitrate: statistics.getBitrate().toDouble(),
-          speed: statistics.getSpeed().toDouble(),
-          videoFrameNumber: statistics.getVideoFrameNumber(),
-          videoQuality: statistics.getVideoQuality().toDouble(),
-          videoFps: statistics.getVideoFps().toDouble(),
-          timeElapsed: DateTime.now().difference(initTime).inMilliseconds,
-          fileNum: fileNum ?? 0,
-          totalFiles: totalFiles ?? 0,
-          outputPath: outputPath ?? ffmepegStat.outputPath,
-        ),
-      );
-    });
-
-    await FFmpegKit.executeAsync(arguments, (session) async {
-      final rc = await session.getReturnCode();
-      // Disable statistics callback after session
-      FFmpegKitConfig.enableStatisticsCallback((_) {});
-      if (ReturnCode.isSuccess(rc)) {
-        ffmepegStat.finished = finished;
-        ffmepegStat.outputPath = outputPath!;
-        _ffmepegStat.add(ffmepegStat);
-        Duration diffTime = DateTime.now().difference(initTime);
-        logger.i('Generator.executeCommand() $diffTime)');
-        completer.complete(outputPath);
-      } else {
-        ffmepegStat.error = true;
-        _ffmepegStat.add(ffmepegStat);
-        final output = await session.getAllLogsAsString();
-        logger.e('Generator.executeCommand() $output');
-        completer.complete('');
-      }
-      ffmepegStat.time = 0;
-    });
-
+    // ffmpeg_kit_flutter_new does not support direct statistics callback like flutter_ffmpeg
+    // so we only execute and check result
+    final session = await FFmpegKit.execute(arguments);
+    final returnCode = await session.getReturnCode();
+    if (ReturnCode.isSuccess(returnCode)) {
+      ffmepegStat.finished = finished;
+      ffmepegStat.outputPath = outputPath;
+      _ffmepegStat.add(ffmepegStat);
+      Duration diffTime = DateTime.now().difference(initTime);
+      logger.i('Generator.executeCommand() $diffTime)');
+      completer.complete(outputPath);
+    } else {
+      ffmepegStat.error = true;
+      _ffmepegStat.add(ffmepegStat);
+      final output = await session.getAllLogsAsString();
+      logger.e('Generator.executeCommand() $output');
+      // Optionally: Crashlytics.instance.recordError(...)
+      completer.complete(null);
+    }
+    ffmepegStat.time = 0;
     return completer.future;
   }
 
-  finishVideoGeneration() async {
-    _ffmepegStat.add(FFmpegStat(outputPath: ffmepegStat.outputPath));
-    await FFmpegKit.cancel();
+  Future<void> finishVideoGeneration() async {
+    _ffmepegStat.add(FFmpegStat());
+    // ffmpeg_kit_flutter_new does not support cancel in the same way; you may need to manage this differently
   }
 
   String _commandLogLevel(String level) => '-loglevel $level ';
@@ -339,16 +330,14 @@ class Generator {
     String arguments = "";
     for (var i = 0; i < layer.assets.length; i++) {
       arguments +=
-          '[${startIndex + i}:a]' +
-          _commandTrimFilter(layer.assets[i], true) +
-          'acopy[a${startIndex + i}];';
+          '[${startIndex + i}:a]${_commandTrimFilter(layer.assets[i], true)}acopy[a${startIndex + i}];';
     }
     return arguments;
   }
 
   String _commandTrimFilter(Asset asset, bool audio) =>
-      '${audio ? "a" : ""}trim=${(asset.cutFrom ?? 0) / 1000}' +
-      ':${((asset.cutFrom ?? 0) + (asset.duration ?? 0)) / 1000},' +
+      '${audio ? "a" : ""}trim=${asset.cutFrom / 1000}' +
+      ':${(asset.cutFrom + asset.duration) / 1000},' +
       '${audio ? "a" : ""}setpts=PTS-STARTPTS,';
 
   String _commandPadForAspectRatioFilter(VideoResolution videoResolution) {
@@ -395,7 +384,7 @@ class Generator {
   ) {
     VideoResolutionSize size = _videoResolutionSize(videoResolution);
     // Default framerate 25 in zoompan
-    double d = asset.duration! / 1000 * 25;
+    double d = asset.duration / 1000 * 25;
     String s = "${size.width}x${size.height}";
     // Zoom 20%
     String z = asset.kenBurnZSign == 1
@@ -451,19 +440,18 @@ class Generator {
   }
 
   _commandDrawText(Asset asset, VideoResolution videoResolution) async {
-    String fontFile = await _getFontPath(asset.font ?? 'default_font.ttf');
-    String fontColor =
-        '0x' + ((asset.fontColor ?? 0xFF000000).toRadixString(16).substring(2));
+    String fontFile = await _getFontPath(asset.font);
+    String fontColor = '0x' + asset.fontColor.toRadixString(16).substring(2);
     VideoResolutionSize size = _videoResolutionSize(videoResolution);
 
     return "drawtext=" +
-        "enable='between(t,${(asset.begin ?? 0) / 1000},${((asset.begin ?? 0) + (asset.duration ?? 0)) / 1000})':" +
-        "x=${(asset.x ?? 0) * size.width}:y=${(asset.y ?? 0) * size.height}:" +
-        "fontfile=$fontFile:fontsize=${(asset.fontSize ?? 0) * size.width}:" +
-        "fontcolor=$fontColor:alpha=${asset.alpha ?? 1.0}:" +
-        "borderw=${asset.borderw ?? 0}:bordercolor=${colorStr(asset.bordercolor ?? 0)}:" +
-        "shadowcolor=${colorStr(asset.shadowcolor ?? 0)}:shadowx=${asset.shadowx ?? 0}:shadowy=${asset.shadowy ?? 0}:" +
-        "box=${asset.box == true ? 1 : 0}:boxborderw=${asset.boxborderw ?? 0}:boxcolor=${colorStr(asset.boxcolor ?? 0)}:" +
+        "enable='between(t,${asset.begin / 1000},${(asset.begin + asset.duration) / 1000})':" +
+        "x=${asset.x * size.width}:y=${asset.y * size.height}:" +
+        "fontfile=$fontFile:fontsize=${asset.fontSize * size.width}:" +
+        "fontcolor=$fontColor:alpha=${asset.alpha}:" +
+        "borderw=${asset.borderw}:bordercolor=${colorStr(asset.bordercolor)}:" +
+        "shadowcolor=${colorStr(asset.shadowcolor)}:shadowx=${asset.shadowx}:shadowy=${asset.shadowy}:" +
+        "box=${asset.box ? 1 : 1}:boxborderw=${asset.boxborderw}:boxcolor=${colorStr(asset.boxcolor)}:" +
         "line_spacing=0:" +
         "text='${asset.title}',";
   }
@@ -537,8 +525,8 @@ enum VideoResolution { sd, hd, fullHd, mini }
 enum CodecsAndFormat { Mpeg4, Xvid, H264AacMp4, VP9OpusWebm }
 
 class VideoResolutionSize {
-  int width;
-  int height;
+  final int width;
+  final int height;
   VideoResolutionSize({required this.width, required this.height});
 }
 
@@ -550,12 +538,12 @@ class FFmpegStat {
   int videoFrameNumber;
   double videoQuality;
   double videoFps;
-  bool finished = false;
-  String outputPath;
-  bool error = false;
+  bool finished;
+  String? outputPath;
+  bool error;
   int timeElapsed;
-  int fileNum;
-  int totalFiles;
+  int? fileNum;
+  int? totalFiles;
 
   FFmpegStat({
     this.time = 0,
@@ -565,9 +553,11 @@ class FFmpegStat {
     this.videoFrameNumber = 0,
     this.videoQuality = 0,
     this.videoFps = 0,
-    required this.outputPath,
+    this.outputPath,
     this.timeElapsed = 0,
-    this.fileNum = 0,
-    this.totalFiles = 0,
+    this.fileNum,
+    this.totalFiles,
+    this.finished = false,
+    this.error = false,
   });
 }

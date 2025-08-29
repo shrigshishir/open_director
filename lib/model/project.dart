@@ -2,13 +2,12 @@ class Project {
   int? id;
   String title;
   String? description;
-  final DateTime date;
-  final int duration;
+  DateTime date;
+  int duration;
   String? layersJson;
   String? imagePath;
 
   Project({
-    this.id,
     required this.title,
     this.description,
     required this.date,
@@ -18,7 +17,7 @@ class Project {
   });
 
   Map<String, dynamic> toMap() {
-    final map = <String, dynamic>{
+    var map = <String, dynamic>{
       'title': title,
       'description': description,
       'date': date.millisecondsSinceEpoch,
@@ -32,15 +31,14 @@ class Project {
     return map;
   }
 
-  factory Project.fromMap(Map<String, dynamic> map) => Project(
-    id: map['_id'] as int?,
-    title: map['title'] as String,
-    description: map['description'] as String?,
-    date: DateTime.fromMillisecondsSinceEpoch(map['date'] as int),
-    duration: map['duration'] as int,
-    layersJson: map['layersJson'] as String?,
-    imagePath: map['imagePath'] as String?,
-  );
+  Project.fromMap(Map<String, dynamic> map)
+    : id = map['_id'],
+      title = map['title'],
+      description = map['description'],
+      date = DateTime.fromMillisecondsSinceEpoch(map['date']),
+      duration = map['duration'],
+      layersJson = map['layersJson'],
+      imagePath = map['imagePath'];
 
   @override
   String toString() {
@@ -51,26 +49,5 @@ class Project {
         'date: $date, '
         'duration: $duration, '
         'imagePath: $imagePath}';
-  }
-
-  // Copy With
-  Project copyWith({
-    int? id,
-    String? title,
-    String? description,
-    DateTime? date,
-    int? duration,
-    String? layersJson,
-    String? imagePath,
-  }) {
-    return Project(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      description: description ?? this.description,
-      date: date ?? this.date,
-      duration: duration ?? this.duration,
-      layersJson: layersJson ?? this.layersJson,
-      imagePath: imagePath ?? this.imagePath,
-    );
   }
 }

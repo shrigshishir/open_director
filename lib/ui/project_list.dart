@@ -12,7 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:dotted_border/dotted_border.dart';
 
 class ProjectList extends StatelessWidget {
-  // final projectService = locator.get<ProjectService>();
+  final projectService = locator.get<ProjectService>();
 
   @override
   Widget build(BuildContext context) {

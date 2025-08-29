@@ -11,33 +11,31 @@ class TextPlayerEditor extends StatelessWidget {
   final directorService = locator.get<DirectorService>();
   final Asset? _asset;
 
-  TextPlayerEditor(this._asset);
+  TextPlayerEditor(this._asset, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     if (_asset == null) return Container();
     var txtController = TextEditingController();
-    txtController.text = _asset.title ?? '';
-    Font font = Font.getByPath(_asset.font ?? '');
+    txtController.text = _asset.title;
+    Font font = Font.getByPath(_asset.font);
 
     return GestureDetector(
       onPanUpdate: (details) {
+        if (_asset == null) return;
         // Not create clone because it is too slow
-        _asset.x =
-            (_asset.x ?? 0) + details.delta.dx / Params.getPlayerWidth(context);
-        _asset.y =
-            (_asset.y ?? 0) +
-            details.delta.dy / Params.getPlayerHeight(context);
-        if ((_asset.x ?? 0) < 0) {
+        _asset.x += details.delta.dx / Params.getPlayerWidth(context);
+        _asset.y += details.delta.dy / Params.getPlayerHeight(context);
+        if (_asset.x < 0) {
           _asset.x = 0;
         }
-        if ((_asset.x ?? 0) > 0.85) {
+        if (_asset.x > 0.85) {
           _asset.x = 0.85;
         }
-        if ((_asset.y ?? 0) < 0) {
+        if (_asset.y < 0) {
           _asset.y = 0;
         }
-        if ((_asset.y ?? 0) > 0.85) {
+        if (_asset.y > 0.85) {
           _asset.y = 0.85;
         }
         directorService.editingTextAsset = _asset;
@@ -70,14 +68,14 @@ class TextPlayerEditor extends StatelessWidget {
           style: TextStyle(
             height: 1.0,
             fontSize:
-                _asset.fontSize! *
+                _asset.fontSize *
                 Params.getPlayerWidth(context) /
                 MediaQuery.of(context).textScaleFactor,
             fontStyle: font.style,
             fontFamily: font.family,
             fontWeight: font.weight,
-            color: Color(_asset.fontColor ?? 0xFF000000),
-            backgroundColor: Color(_asset.boxcolor ?? 0x00000000),
+            color: Color(_asset.fontColor),
+            backgroundColor: Color(_asset.boxcolor),
           ),
           onChanged: (newVal) {
             directorService.editingTextAsset?.title = newVal;

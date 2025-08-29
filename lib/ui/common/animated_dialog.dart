@@ -21,12 +21,20 @@ class AnimatedDialog {
 
     if (button1Text != null) {
       actionButtons.add(
-        ElevatedButton(child: Text(button1Text!), onPressed: onPressedButton1),
+        TextButton(
+          child: Text(button1Text!),
+          style: TextButton.styleFrom(foregroundColor: Colors.white),
+          onPressed: onPressedButton1,
+        ),
       );
     }
     if (button2Text != null) {
       actionButtons.add(
-        ElevatedButton(child: Text(button2Text!), onPressed: onPressedButton2),
+        TextButton(
+          child: Text(button2Text!),
+          style: TextButton.styleFrom(foregroundColor: Colors.white),
+          onPressed: onPressedButton2,
+        ),
       );
     }
 
@@ -34,16 +42,7 @@ class AnimatedDialog {
       context: context,
       barrierDismissible: false,
       transitionDuration: Duration(milliseconds: 300),
-      pageBuilder: (context, anim1, anim2) => Container(
-        child: AlertDialog(
-          title: Text(title),
-          content: Container(
-            width: MediaQuery.of(context).size.width / 3,
-            child: child,
-          ),
-          actions: actionButtons,
-        ),
-      ),
+      pageBuilder: (context, anim1, anim2) => const SizedBox.shrink(),
       transitionBuilder: (context, animation, secondaryAnimation, _child) {
         var fadeTween = CurveTween(curve: Curves.fastOutSlowIn);
         var fadeAnimation = fadeTween.animate(animation);
