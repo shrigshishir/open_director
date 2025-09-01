@@ -552,39 +552,73 @@ class _TextPlayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final directorService = locator.get<DirectorService>();
-    return StreamBuilder<Asset?>(
-      stream: directorService.editingTextAsset$,
-      initialData: null,
-      builder: (BuildContext context, AsyncSnapshot<Asset?> editingTextAsset) {
-        Asset? asset = editingTextAsset.data;
-        asset ??= directorService.getAssetByPosition(1);
-        if (asset == null || asset.type != AssetType.text) {
-          return Container();
-        }
-        Font font = Font.getByPath(asset.font);
-        return Positioned(
-          left: asset.x * Params.getPlayerWidth(context),
-          top: asset.y * Params.getPlayerHeight(context),
-          child: (directorService.editingTextAsset == null)
-              ? Text(
-                  asset.title,
-                  style: TextStyle(
-                    height: 1,
-                    fontSize:
-                        asset.fontSize *
-                        Params.getPlayerWidth(context) /
-                        MediaQuery.of(context).textScaleFactor,
-                    fontStyle: font.style,
-                    fontFamily: font.family,
-                    fontWeight: font.weight,
-                    color: Color(asset.fontColor),
-                    backgroundColor: Color(asset.boxcolor),
-                  ),
-                )
-              : TextPlayerEditor(editingTextAsset.data),
+    return StreamBuilder<int>(
+      stream: directorService.position$,
+      initialData: directorService.position,
+      builder: (BuildContext context, AsyncSnapshot<int> positionSnapshot) {
+        final currentPosition = positionSnapshot.data ?? 0;
+
+        return StreamBuilder<Asset?>(
+          stream: directorService.editingTextAsset$,
+          initialData: null,
+          builder: (BuildContext context, AsyncSnapshot<Asset?> editingTextAsset) {
+            // If we're editing a text asset, show the editor regardless of timing
+            if (editingTextAsset.data != null) {
+              return Positioned(
+                left: editingTextAsset.data!.x * Params.getPlayerWidth(context),
+                top: editingTextAsset.data!.y * Params.getPlayerHeight(context),
+                child: TextPlayerEditor(editingTextAsset.data),
+              );
+            }
+
+            // Get all text assets that should be visible at current position
+            List<Widget> visibleTextWidgets = [];
+
+            if (directorService.layers.length > 1) {
+              // Make sure text layer exists
+              for (Asset asset in directorService.layers[1].assets) {
+                if (asset.type == AssetType.text &&
+                    asset.title.isNotEmpty &&
+                    !asset.deleted &&
+                    _isAssetVisibleAtPosition(asset, currentPosition)) {
+                  Font font = Font.getByPath(asset.font);
+                  visibleTextWidgets.add(
+                    Positioned(
+                      left: asset.x * Params.getPlayerWidth(context),
+                      top: asset.y * Params.getPlayerHeight(context),
+                      child: Text(
+                        asset.title,
+                        style: TextStyle(
+                          height: 1,
+                          fontSize:
+                              asset.fontSize *
+                              Params.getPlayerWidth(context) /
+                              MediaQuery.of(context).textScaleFactor,
+                          fontStyle: font.style,
+                          fontFamily: font.family,
+                          fontWeight: font.weight,
+                          color: Color(asset.fontColor),
+                          backgroundColor: Color(asset.boxcolor),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+              }
+            }
+
+            return Stack(children: visibleTextWidgets);
+          },
         );
       },
     );
+  }
+
+  /// Check if a text asset should be visible at the given position
+  bool _isAssetVisibleAtPosition(Asset asset, int position) {
+    final startTime = asset.begin;
+    final endTime = asset.begin + asset.duration;
+    return position >= startTime && position < endTime;
   }
 }
 
@@ -710,7 +744,9 @@ class _Asset extends StatelessWidget {
               : null,
         ),
         // Removed text overlay to clean up thumbnail display
-        child: SizedBox.shrink(),
+        child: layerIndex == 1
+            ? Center(child: Text(asset.title))
+            : SizedBox.shrink(),
       ),
       onTap: () => directorService.select(layerIndex, assetIndex),
       onLongPressStart: (LongPressStartDetails details) {

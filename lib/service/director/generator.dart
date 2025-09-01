@@ -110,7 +110,7 @@ class Generator {
     }
 
     logger.i(
-      'Video generation started: ${layers[0].assets.length} video assets, ${layers[2].assets.length} audio assets',
+      'Video generation started: ${layers[0].assets.length} video assets, ${layers[1].assets.length} text assets, ${layers[2].assets.length} audio assets',
     );
 
     String arguments = _commandLogLevel('error');
@@ -589,24 +589,32 @@ class Generator {
 
   _getFontPath(String relativePath) async {
     const String rootFontsPath = 'fonts';
-    final ByteData fontFile = await rootBundle.load(
-      p.join(rootFontsPath, relativePath),
-    );
-    final Directory appDocDir = await getApplicationDocumentsDirectory();
-    final String fontPath = p.join(
-      appDocDir.parent.path,
-      rootFontsPath,
-      relativePath,
-    );
-    File(fontPath)
-      ..createSync(recursive: true)
-      ..writeAsBytesSync(
-        fontFile.buffer.asUint8List(
-          fontFile.offsetInBytes,
-          fontFile.lengthInBytes,
-        ),
+    try {
+      final ByteData fontFile = await rootBundle.load(
+        p.join('assets', rootFontsPath, relativePath),
       );
-    return fontPath;
+      final Directory appDocDir = await getApplicationDocumentsDirectory();
+      final String fontPath = p.join(
+        appDocDir.parent.path,
+        rootFontsPath,
+        relativePath,
+      );
+      File(fontPath)
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(
+          fontFile.buffer.asUint8List(
+            fontFile.offsetInBytes,
+            fontFile.lengthInBytes,
+          ),
+        );
+      return fontPath;
+    } catch (e) {
+      logger.e('Error loading font asset: $relativePath', error: e);
+      // Return a fallback or throw a more descriptive error
+      throw Exception(
+        'Unable to load font asset: "$relativePath". The asset does not exist or has empty data.',
+      );
+    }
   }
 }
 
