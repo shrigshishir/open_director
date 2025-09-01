@@ -710,7 +710,9 @@ class _Asset extends StatelessWidget {
               : null,
         ),
         // Removed text overlay to clean up thumbnail display
-        child: SizedBox.shrink(),
+        child: layerIndex == 1
+            ? Center(child: Text(asset.title))
+            : SizedBox.shrink(),
       ),
       onTap: () => directorService.select(layerIndex, assetIndex),
       onLongPressStart: (LongPressStartDetails details) {
