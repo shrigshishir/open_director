@@ -43,52 +43,53 @@ class ColorForm extends StatelessWidget {
       fontColor = directorService.editingTextAsset?.boxcolor ?? 0;
     }
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Container(
-          width: MediaQuery.of(context).size.width - 130,
-          child: Wrap(
-            children: [
-              Container(
-                height:
-                    (MediaQuery.of(context).orientation ==
-                        Orientation.landscape)
-                    ? 116
-                    : 320,
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                child: ColorPicker(
-                  pickerColor: Color(fontColor),
-                  paletteType: PaletteType.hsv,
-                  enableAlpha: true,
-                  colorPickerWidth: 240,
-                  pickerAreaHeightPercent: 0.8,
-                  onColorChanged: (color) {
-                    final editingTextAsset = directorService.editingTextAsset;
-                    if (editingTextAsset == null) return;
-                    Asset newAsset = Asset.clone(editingTextAsset);
-                    if (directorService.editingColor == 'fontColor') {
-                      newAsset.fontColor = color.value;
-                    } else if (directorService.editingColor == 'boxcolor') {
-                      newAsset.boxcolor = color.value;
-                    }
-                    directorService.editingTextAsset = newAsset;
-                  },
-                ),
-              ),
-            ],
+          width: MediaQuery.of(context).size.width - 150,
+          child: Container(
+            // height:
+            //     (MediaQuery.of(context).orientation == Orientation.landscape)
+            //     ? 116
+            //     : 300,
+            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+            child: ColorPicker(
+              pickerColor: Color(fontColor),
+              paletteType: PaletteType.hsv,
+              enableAlpha: true,
+              colorPickerWidth: 240,
+              pickerAreaHeightPercent: 0.8,
+              onColorChanged: (color) {
+                final editingTextAsset = directorService.editingTextAsset;
+                if (editingTextAsset == null) return;
+                Asset newAsset = Asset.clone(editingTextAsset);
+                if (directorService.editingColor == 'fontColor') {
+                  newAsset.fontColor = color.value;
+                } else if (directorService.editingColor == 'boxcolor') {
+                  newAsset.boxcolor = color.value;
+                }
+                directorService.editingTextAsset = newAsset;
+              },
+            ),
           ),
         ),
-        Container(
-          child: Column(
-            children: <Widget>[
-              ElevatedButton(
-                child: Text('SELECT'),
-                onPressed: () {
-                  directorService.editingColor = '';
-                },
-              ),
-            ],
-          ),
+        Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            TextButton(
+              onPressed: () {
+                directorService.editingColor = null;
+              },
+              child: Text('CANCEL'),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+              child: Text('SELECT'),
+              onPressed: () {
+                directorService.editingColor = null;
+              },
+            ),
+          ],
         ),
       ],
     );
