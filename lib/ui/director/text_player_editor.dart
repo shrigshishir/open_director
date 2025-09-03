@@ -40,7 +40,7 @@ class TextPlayerEditor extends StatelessWidget {
         }
         directorService.editingTextAsset = _asset;
       },
-      child: Container(
+      child: SizedBox(
         width: Params.getPlayerWidth(context),
         child: TextField(
           controller: txtController,

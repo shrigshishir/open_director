@@ -37,39 +37,64 @@ class LayerPlayer {
       _videoController = null;
     }
 
-    // Only create controller for video assets
-    if (asset.type == AssetType.video && !asset.deleted) {
+    // Create controller for video and audio assets
+    if ((asset.type == AssetType.video || asset.type == AssetType.audio) &&
+        !asset.deleted) {
       try {
-        // Additional check: verify the file exists and has valid video extension
+        // Additional check: verify the file exists and has valid extension
         final file = File(asset.srcPath);
         if (!await file.exists()) {
-          print('Video file does not exist: ${asset.srcPath}');
+          print(
+            '${asset.type == AssetType.video ? 'Video' : 'Audio'} file does not exist: ${asset.srcPath}',
+          );
           return;
         }
 
         final extension = asset.srcPath.toLowerCase().split('.').last;
-        final videoExtensions = [
-          'mp4',
-          'mov',
-          'avi',
-          'mkv',
-          'wmv',
-          'flv',
-          '3gp',
-          'm4v',
-        ];
 
-        if (!videoExtensions.contains(extension)) {
-          print(
-            'File does not have video extension: ${asset.srcPath} (extension: $extension)',
-          );
-          return;
+        if (asset.type == AssetType.video) {
+          final videoExtensions = [
+            'mp4',
+            'mov',
+            'avi',
+            'mkv',
+            'wmv',
+            'flv',
+            '3gp',
+            'm4v',
+          ];
+
+          if (!videoExtensions.contains(extension)) {
+            print(
+              'File does not have video extension: ${asset.srcPath} (extension: $extension)',
+            );
+            return;
+          }
+        } else if (asset.type == AssetType.audio) {
+          final audioExtensions = [
+            'mp3',
+            'wav',
+            'aac',
+            'm4a',
+            'ogg',
+            'flac',
+            'wma',
+          ];
+
+          if (!audioExtensions.contains(extension)) {
+            print(
+              'File does not have audio extension: ${asset.srcPath} (extension: $extension)',
+            );
+            return;
+          }
         }
 
         _videoController = VideoPlayerController.file(file);
         await _videoController!.initialize();
       } catch (e) {
-        print('Error initializing video controller for ${asset.srcPath}: $e');
+        print(
+          'Error initializing ${asset.type == AssetType.video ? 'video' : 'audio'} controller for ${asset.srcPath}: $e',
+        );
         _videoController = null;
       }
     }
@@ -86,7 +111,7 @@ class LayerPlayer {
       return;
     }
 
-    if (asset.type != AssetType.video) return;
+    if (asset.type != AssetType.video && asset.type != AssetType.audio) return;
 
     // Initialize controller for this asset if needed
     await _initializeForAsset(currentAssetIndex);
@@ -124,7 +149,7 @@ class LayerPlayer {
       return;
     }
 
-    if (asset.type != AssetType.video) return;
+    if (asset.type != AssetType.video && asset.type != AssetType.audio) return;
 
     // Initialize controller for this asset if needed
     await _initializeForAsset(currentAssetIndex);
@@ -179,8 +204,9 @@ class LayerPlayer {
           if (nextAsset.type == AssetType.image) {
             // Continue with next image
             _startImagePlayback(nextAsset.begin, nextAsset);
-          } else if (nextAsset.type == AssetType.video) {
-            // Switch to video playback
+          } else if (nextAsset.type == AssetType.video ||
+              nextAsset.type == AssetType.audio) {
+            // Switch to video/audio playback
             _playVideoAsset(nextAsset.begin, nextAssetIndex);
           }
 
@@ -275,8 +301,9 @@ class LayerPlayer {
 
         print('Moving to next asset: $nextAssetIndex, type: ${nextAsset.type}');
 
-        if (nextAsset.type == AssetType.video) {
-          // Initialize and play next video
+        if (nextAsset.type == AssetType.video ||
+            nextAsset.type == AssetType.audio) {
+          // Initialize and play next video/audio
           await _initializeForAsset(nextAssetIndex);
           if (_videoController != null) {
             _newPosition = nextAsset.begin;

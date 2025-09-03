@@ -173,7 +173,7 @@ class DirectorService {
       if (_project.layersJson == null) {
         layers = [
           // TODO: audio mixing between layers
-          Layer(type: "raster", volume: 0.1),
+          Layer(type: "raster", volume: 1.0),
           Layer(type: "vector"),
           Layer(type: "audio", volume: 1.0),
         ];
@@ -314,15 +314,24 @@ class DirectorService {
     print('mainLayer: $mainLayer');
 
     for (int i = 0; i < layers.length; i++) {
-      if (i == 1) continue;
-      if (i == mainLayer) {
+      if (i == 1) {
+        print('Skipping layer $i (text layer)');
+        continue;
+      }
+
+      print(
+        'Processing layer $i (${layers[i].type}), assets: ${layers[i].assets.length}',
+      );
+
+      if (i == 0) {
+        // Layer 0 (raster/video) controls visual playback and position updates
         await layerPlayers[i]?.play(
           position,
           onMove: (int newPosition) {
             _position.add(newPosition);
             scrollController.animateTo(
               (300 + newPosition) / 1000 * pixelsPerSecond,
-              duration: Duration(milliseconds: 300),
+              duration: Duration(milliseconds: 100),
               curve: Curves.linear,
             );
           },
@@ -418,7 +427,7 @@ class DirectorService {
       } else if (assetType == AssetType.audio) {
         final result = await FilePicker.platform.pickFiles(
           type: FileType.audio,
-          allowMultiple: true,
+          allowMultiple: false,
         );
         if (result == null) return;
 
@@ -672,6 +681,21 @@ class DirectorService {
           'WARNING: Video asset has non-video extension: $srcPath (extension: $extension)',
         );
       }
+    } else if (type == AssetType.audio) {
+      final audioExtensions = [
+        'mp3',
+        'wav',
+        'aac',
+        'm4a',
+        'ogg',
+        'flac',
+        'wma',
+      ];
+      if (!audioExtensions.contains(extension)) {
+        print(
+          'WARNING: Audio asset has non-audio extension: $srcPath (extension: $extension)',
+        );
+      }
     }
 
     int assetDuration;
@@ -713,7 +737,11 @@ class DirectorService {
       final appDocDir = await getApplicationDocumentsDirectory();
 
       // Create subdirectory based on asset type
-      final subdirName = type == AssetType.image ? 'images' : 'videos';
+      final subdirName = type == AssetType.image
+          ? 'images'
+          : type == AssetType.audio
+          ? 'audio'
+          : 'videos';
       final targetDir = Directory(p.join(appDocDir.path, 'media', subdirName));
       await targetDir.create(recursive: true);
 
